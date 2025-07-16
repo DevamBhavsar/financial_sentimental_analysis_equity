@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from ..database import Base
@@ -15,7 +15,7 @@ class Article(Base):
     author = Column(String)
     published_at = Column(DateTime(timezone=True), nullable=False)
     ticker = Column(String, index=True)
-    sector = Column(String, index=True)
+    sector = Column(String)
     is_processed = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

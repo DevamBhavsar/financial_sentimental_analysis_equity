@@ -3,6 +3,7 @@ from datetime import datetime
 
 
 class SentimentBase(BaseModel):
+    article_id: int
     ticker: str
     sentiment_score: float
     sentiment_label: str
@@ -12,13 +13,12 @@ class SentimentBase(BaseModel):
 
 
 class SentimentCreate(SentimentBase):
-    article_id: int
+    pass
 
 
-class SentimentResponse(SentimentBase):
+class Sentiment(SentimentBase):
     id: int
-    article_id: int
     created_at: datetime
 
     class Config:
-        from_attributes = True
+        orm_mode = True

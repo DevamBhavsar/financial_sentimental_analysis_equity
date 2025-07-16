@@ -5,11 +5,11 @@ from datetime import datetime
 
 class ArticleBase(BaseModel):
     title: str
-    content: Optional[str] = None
     url: str
     source: str
-    author: Optional[str] = None
     published_at: datetime
+    content: Optional[str] = None
+    author: Optional[str] = None
     ticker: Optional[str] = None
     sector: Optional[str] = None
 
@@ -18,10 +18,14 @@ class ArticleCreate(ArticleBase):
     pass
 
 
-class ArticleResponse(ArticleBase):
+class ArticleUpdate(ArticleBase):
+    is_processed: bool
+
+
+class Article(ArticleBase):
     id: int
     is_processed: bool
     created_at: datetime
 
     class Config:
-        from_attributes = True
+        orm_mode = True

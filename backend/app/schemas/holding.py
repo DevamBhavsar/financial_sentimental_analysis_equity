@@ -9,20 +9,18 @@ class HoldingBase(BaseModel):
     quantity: float
     avg_price: float
     sector: Optional[str] = None
-    holding_type: str  # 'equity' or 'mutual_fund'
+    holding_type: str
 
 
 class HoldingCreate(HoldingBase):
     pass
 
 
-class HoldingUpdate(BaseModel):
-    quantity: Optional[float] = None
-    avg_price: Optional[float] = None
-    current_price: Optional[float] = None
+class HoldingUpdate(HoldingBase):
+    pass
 
 
-class HoldingResponse(HoldingBase):
+class Holding(HoldingBase):
     id: int
     user_id: int
     current_price: Optional[float] = None
@@ -30,4 +28,4 @@ class HoldingResponse(HoldingBase):
     updated_at: Optional[datetime] = None
 
     class Config:
-        from_attributes = True
+        orm_mode = True

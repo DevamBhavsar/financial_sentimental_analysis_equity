@@ -1,21 +1,21 @@
-from .user import UserCreate, UserLogin, UserResponse, Token
-from .holding import HoldingCreate, HoldingResponse, HoldingUpdate
-from .article import ArticleResponse, ArticleCreate
-from .sentiment import SentimentResponse, SentimentCreate
-from .watchlist import WatchlistCreate, WatchlistResponse
+from .article import Article, ArticleCreate, ArticleUpdate
+from .holding import Holding, HoldingCreate, HoldingUpdate
+from .sentiment import Sentiment, SentimentCreate
+from .user import User, UserCreate, UserUpdate
+from .watchlist import Watchlist, WatchlistCreate
 
 __all__ = [
-    "UserCreate",
-    "UserLogin",
-    "UserResponse",
-    "Token",
-    "HoldingCreate",
-    "HoldingResponse",
-    "HoldingUpdate",
-    "ArticleResponse",
+    "Article",
     "ArticleCreate",
-    "SentimentResponse",
+    "ArticleUpdate",
+    "Holding",
+    "HoldingCreate",
+    "HoldingUpdate",
+    "Sentiment",
     "SentimentCreate",
+    "User",
+    "UserCreate",
+    "UserUpdate",
+    "Watchlist",
     "WatchlistCreate",
-    "WatchlistResponse",
 ]
