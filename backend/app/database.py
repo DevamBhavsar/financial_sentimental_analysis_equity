@@ -1,29 +1,44 @@
 # app/database.py
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import declarative_base
 import redis.asyncio as aioredis
 from .config import settings
 from sqlalchemy.ext.asyncio import async_sessionmaker
+from contextlib import asynccontextmanager
 
 # Database
 engine = create_async_engine(
-    settings.DATABASE_URL, echo=settings.debug, pool_pre_ping=True, pool_recycle=300
+    settings.DATABASE_URL,
+    echo=settings.debug,
+    pool_pre_ping=True,
+    pool_recycle=300,
+    pool_size=20,
+    max_overflow=10,
 )
 
 
-AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
+AsyncSessionLocal = async_sessionmaker(
+    engine, class_=AsyncSession, expire_on_commit=False
+)
 
 Base = declarative_base()
 
-# Redis
-redis_client = None
+# Redis connection pool
+redis_pool = None
 
 
+@asynccontextmanager
 async def get_redis():
-    global redis_client
-    if redis_client is None:
-        redis_client = await aioredis.from_url(settings.REDIS_URL)
-    return redis_client
+    global redis_pool
+    if redis_pool is None:
+        redis_pool = aioredis.ConnectionPool.from_url(
+            settings.REDIS_URL, max_connections=10
+        )
+    client = aioredis.Redis(connection_pool=redis_pool)
+    try:
+        yield client
+    finally:
+        await client.close()
 
 
 async def get_db():
@@ -41,5 +56,5 @@ async def init_db():
 
 async def close_db():
     await engine.dispose()
-    if redis_client:
-        await redis_client.close()
+    if redis_pool:
+        await redis_pool.disconnect()

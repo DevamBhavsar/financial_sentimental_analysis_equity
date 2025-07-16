@@ -18,8 +18,8 @@ class Settings(BaseSettings):
     EXPIRY_MIN: int
 
     # External APIs
-    NEW_API_KEY: Optional[str]
-    ALPHA_VANTAGE_KEY: Optional[str]
+    news_api_key: Optional[str] = None
+    alpha_vantage_api_key: Optional[str] = None
 
     # File upload
     max_file_size: int = 10 * 1024 * 1024  # 10MB

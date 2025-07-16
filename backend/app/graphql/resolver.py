@@ -3,14 +3,15 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 from sqlalchemy import select, and_
 
-from ..models import (
-    User as UserModel,
-    Holding as HoldingModel,
-    Article as ArticleModel,
-    Sentiment as SentimentModel,
-    Watchlist as WatchlistModel,
-)
-from ..auth import authenticate_user, create_access_token, get_password_hash
+# Fixed imports
+from ..models.user import User as UserModel
+from ..models.holding import Holding as HoldingModel
+from ..models.article import Article as ArticleModel
+from ..models.sentiment import Sentiment as SentimentModel
+from ..models.watchlist import Watchlist as WatchlistModel
+
+# Fixed auth imports
+from ..auth.auth import authenticate_user, create_access_token, get_password_hash
 from ..config import settings
 from .types import (
     User,
@@ -24,26 +25,28 @@ from .types import (
     HoldingInput,
     WatchlistInput,
 )
+from .converters import (
+    user_to_graphql,
+    holding_to_graphql,
+    watchlist_to_graphql,
+    sentiment_to_graphql,
+    article_to_graphql,
+)
 
 
-# Define GraphQL schema
 @strawberry.type
 class Query:
     @strawberry.field
     async def me(self, info: strawberry.Info) -> User:
-        # Get current user from context
+        if "current_user" not in info.context:
+            raise Exception("Authentication required")
         current_user = info.context["current_user"]
-        return User(
-            id=current_user.id,
-            email=current_user.email,
-            first_name=current_user.first_name,
-            last_name=current_user.last_name,
-            is_active=current_user.is_active,
-            created_at=current_user.created_at,
-        )
+        return user_to_graphql(current_user)
 
     @strawberry.field
     async def holdings(self, info: strawberry.Info) -> List[Holding]:
+        if "current_user" not in info.context:
+            raise Exception("Authentication required")
         db = info.context["db"]
         current_user = info.context["current_user"]
 
@@ -52,25 +55,12 @@ class Query:
         )
         holdings = result.scalars().all()
 
-        return [
-            Holding(
-                id=h.id,
-                user_id=h.user_id,
-                ticker=h.ticker,
-                name=h.name,
-                quantity=h.quantity,
-                avg_price=h.avg_price,
-                current_price=h.current_price,
-                sector=h.sector,
-                holding_type=h.holding_type,
-                created_at=h.created_at,
-                updated_at=h.updated_at,
-            )
-            for h in holdings
-        ]
+        return [holding_to_graphql(h) for h in holdings]
 
     @strawberry.field
     async def watchlist(self, info: strawberry.Info) -> List[Watchlist]:
+        if "current_user" not in info.context:
+            raise Exception("Authentication required")
         db = info.context["db"]
         current_user = info.context["current_user"]
 
@@ -79,17 +69,7 @@ class Query:
         )
         watchlists = result.scalars().all()
 
-        return [
-            Watchlist(
-                id=w.id,
-                user_id=w.user_id,
-                ticker=w.ticker,
-                name=w.name,
-                sector=w.sector,
-                created_at=w.created_at,
-            )
-            for w in watchlists
-        ]
+        return [watchlist_to_graphql(w) for w in watchlists]
 
     @strawberry.field
     async def sentiment_analysis(
@@ -110,20 +90,7 @@ class Query:
         )
         sentiments = result.scalars().all()
 
-        return [
-            Sentiment(
-                id=s.id,
-                article_id=s.article_id,
-                ticker=s.ticker,
-                sentiment_score=s.sentiment_score,
-                sentiment_label=s.sentiment_label,
-                confidence=s.confidence,
-                recommendation=s.recommendation,
-                analysis_model=s.analysis_model,
-                created_at=s.created_at,
-            )
-            for s in sentiments
-        ]
+        return [sentiment_to_graphql(s) for s in sentiments]
 
     @strawberry.field
     async def recent_articles(
@@ -140,99 +107,78 @@ class Query:
         result = await db.execute(query)
         articles = result.scalars().all()
 
-        return [
-            Article(
-                id=a.id,
-                title=a.title,
-                content=a.content,
-                url=a.url,
-                source=a.source,
-                author=a.author,
-                published_at=a.published_at,
-                ticker=a.ticker,
-                sector=a.sector,
-                is_processed=a.is_processed,
-                created_at=a.created_at,
-            )
-            for a in articles
-        ]
+        return [article_to_graphql(a) for a in articles]
 
 
 @strawberry.type
 class Mutation:
     @strawberry.field
     async def login(self, info: strawberry.Info, input: LoginInput) -> AuthPayload:
-        db = info.context["db"]
+        try:
+            db = info.context["db"]
+            user = await authenticate_user(db, input.email, input.password)
+            if not user:
+                raise Exception("Invalid credentials")
 
-        user = await authenticate_user(db, input.email, input.password)
-        if not user:
-            raise Exception("Invalid credentials")
+            access_token_expires = timedelta(minutes=settings.EXPIRY_MIN)
+            access_token = create_access_token(
+                data={"sub": user.email}, expires_delta=access_token_expires
+            )
 
-        access_token_expires = timedelta(minutes=settings.EXPIRY_MIN)
-        access_token = create_access_token(
-            data={"sub": user.email}, expires_delta=access_token_expires
-        )
-
-        return AuthPayload(
-            access_token=access_token,
-            token_type="bearer",
-            expires_in=settings.EXPIRY_MIN * 60,
-            user=User(
-                id=user.id,
-                email=user.email,
-                first_name=user.first_name,
-                last_name=user.last_name,
-                is_active=user.is_active,
-                created_at=user.created_at,
-            ),
-        )
+            return AuthPayload(
+                access_token=access_token,
+                token_type="bearer",
+                expires_in=settings.EXPIRY_MIN * 60,
+                user=user_to_graphql(user),
+            )
+        except Exception as e:
+            raise Exception(f"Login failed: {str(e)}")
 
     @strawberry.field
     async def register(self, info: strawberry.Info, input: UserInput) -> AuthPayload:
-        db = info.context["db"]
+        try:
+            if len(input.password) < 8:
+                raise Exception("Password must be at least 8 characters")
 
-        # Check if user already exists
-        existing_user = await db.execute(
-            select(UserModel).where(UserModel.email == input.email)
-        )
-        if existing_user.scalar_one_or_none():
-            raise Exception("User already exists")
+            db = info.context["db"]
 
-        # Create new user
-        hashed_password = get_password_hash(input.password)
-        user = UserModel(
-            email=input.email,
-            hashed_password=hashed_password,
-            first_name=input.first_name,
-            last_name=input.last_name,
-        )
+            existing_user = await db.execute(
+                select(UserModel).where(UserModel.email == input.email)
+            )
+            if existing_user.scalar_one_or_none():
+                raise Exception("User already exists")
 
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
+            hashed_password = get_password_hash(input.password)
+            user = UserModel(
+                email=input.email,
+                hashed_password=hashed_password,
+                first_name=input.first_name,
+                last_name=input.last_name,
+            )
 
-        # Generate token
-        access_token_expires = timedelta(minutes=settings.EXPIRY_MIN)
-        access_token = create_access_token(
-            data={"sub": user.email}, expires_delta=access_token_expires
-        )
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
 
-        return AuthPayload(
-            access_token=access_token,
-            token_type="bearer",
-            expires_in=settings.EXPIRY_MIN * 60,
-            user=User(
-                id=user.id,
-                email=user.email,
-                first_name=user.first_name,
-                last_name=user.last_name,
-                is_active=user.is_active,
-                created_at=user.created_at,
-            ),
-        )
+            access_token_expires = timedelta(minutes=settings.EXPIRY_MIN)
+            access_token = create_access_token(
+                data={"sub": user.email}, expires_delta=access_token_expires
+            )
+
+            return AuthPayload(
+                access_token=access_token,
+                token_type="bearer",
+                expires_in=settings.EXPIRY_MIN * 60,
+                user=user_to_graphql(user),
+            )
+        except Exception as e:
+            raise Exception(f"Registration failed: {str(e)}")
 
     @strawberry.field
     async def add_holding(self, info: strawberry.Info, input: HoldingInput) -> Holding:
+        if "current_user" not in info.context:
+            raise Exception("Authentication required")
+
         db = info.context["db"]
         current_user = info.context["current_user"]
 
@@ -250,24 +196,15 @@ class Mutation:
         await db.commit()
         await db.refresh(holding)
 
-        return Holding(
-            id=holding.id,
-            user_id=holding.user_id,
-            ticker=holding.ticker,
-            name=holding.name,
-            quantity=holding.quantity,
-            avg_price=holding.avg_price,
-            current_price=holding.current_price,
-            sector=holding.sector,
-            holding_type=holding.holding_type,
-            created_at=holding.created_at,
-            updated_at=holding.updated_at,
-        )
+        return holding_to_graphql(holding)
 
     @strawberry.field
     async def add_to_watchlist(
         self, info: strawberry.Info, input: WatchlistInput
     ) -> Watchlist:
+        if "current_user" not in info.context:
+            raise Exception("Authentication required")
+
         db = info.context["db"]
         current_user = info.context["current_user"]
 
@@ -282,17 +219,13 @@ class Mutation:
         await db.commit()
         await db.refresh(watchlist)
 
-        return Watchlist(
-            id=watchlist.id,
-            user_id=watchlist.user_id,
-            ticker=watchlist.ticker,
-            name=watchlist.name,
-            sector=watchlist.sector,
-            created_at=watchlist.created_at,
-        )
+        return watchlist_to_graphql(watchlist)
 
     @strawberry.field
     async def remove_holding(self, info: strawberry.Info, id: int) -> bool:
+        if "current_user" not in info.context:
+            raise Exception("Authentication required")
+
         db = info.context["db"]
         current_user = info.context["current_user"]
 
@@ -312,6 +245,9 @@ class Mutation:
 
     @strawberry.field
     async def remove_from_watchlist(self, info: strawberry.Info, id: int) -> bool:
+        if "current_user" not in info.context:
+            raise Exception("Authentication required")
+
         db = info.context["db"]
         current_user = info.context["current_user"]
 
