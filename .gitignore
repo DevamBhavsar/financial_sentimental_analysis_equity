@@ -1,1 +1,6 @@
 datasets
+venv
+.env
+AGENT.md
+frontend
+scripts
