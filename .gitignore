@@ -2,4 +2,17 @@ datasets
 venv
 .env
 AGENT.md
+.venv
 
+frontend/.env.local
+alembic.ini
+alembic.ini
+alembic/env.py
+alembic/README
+alembic/script.py.mako
+alembic
+app.db
+__pycache__
+node_modules
+.next
+next-env.d.ts

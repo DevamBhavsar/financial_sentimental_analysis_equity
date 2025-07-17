@@ -1,9 +1,24 @@
 import { Layout } from '@/components/layouts/Layout'
-import { useState } from 'react'
-import * as XLSX from 'xlsx'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { useMutation } from '@apollo/client'
+import { UPLOAD_HOLDINGS } from './graphql/mutations'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/router'
 
-export default function Upload() {
+export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null)
+  const [uploadHoldings, { data, loading, error }] = useMutation(UPLOAD_HOLDINGS)
+  const router = useRouter()
+
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      router.push('/login')
+    }
+  }, [router])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -11,29 +26,42 @@ export default function Upload() {
     }
   }
 
-  const handleUpload = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
     if (!file) return
-
-    const data = await file.arrayBuffer()
-    const workbook = XLSX.read(data)
-    const worksheet = workbook.Sheets[workbook.SheetNames[0]]
-    const jsonData = XLSX.utils.sheet_to_json(worksheet)
-
-    console.log(jsonData)
-    // Here you would typically send the data to your backend
+    try {
+      const { data } = await uploadHoldings({ variables: { file } })
+      if (data.uploadHoldings.success) {
+        router.push('/dashboard')
+      }
+    } catch (error) {
+      console.error(error)
+    }
   }
 
   return (
     <Layout>
-      <h1 className="text-3xl font-bold">Upload Holdings</h1>
-      <div className="mt-4">
-        <input type="file" onChange={handleFileChange} />
-        <button
-          onClick={handleUpload}
-          className="mt-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-        >
-          Upload
-        </button>
+      <div className="flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-2xl">Upload Holdings</CardTitle>
+            <CardDescription>
+              Upload an Excel file with your mutual fund and equity holdings.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="file">Excel File</Label>
+                <Input id="file" type="file" onChange={handleFileChange} />
+              </div>
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button className="w-full" onClick={handleSubmit} disabled={loading || !file}>{loading ? "Uploading..." : "Upload"}</Button>
+          </CardFooter>
+          {error && <p className="text-red-500 text-center">{error.message}</p>}
+        </Card>
       </div>
     </Layout>
   )

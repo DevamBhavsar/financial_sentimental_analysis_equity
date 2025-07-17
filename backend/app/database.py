@@ -2,23 +2,21 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import declarative_base
 import redis.asyncio as aioredis
+
 from .config import settings
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from contextlib import asynccontextmanager
 
-# Database
+print(settings.DATABASE_URL)  # Database
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.debug,
-    pool_pre_ping=True,
-    pool_recycle=300,
-    pool_size=20,
-    max_overflow=10,
+    connect_args={"check_same_thread": False},
 )
 
 
 AsyncSessionLocal = async_sessionmaker(
-    engine, class_=AsyncSession, expire_on_commit=False
+    bind=engine, class_=AsyncSession, expire_on_commit=False
 )
 
 Base = declarative_base()
