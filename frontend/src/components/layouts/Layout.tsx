@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/context/AuthContext'
 import { ModeToggle } from '@/components/ui/mode-toggle'
+import { Globe } from 'lucide-react'
 
 interface LayoutProps {
   children: ReactNode
@@ -19,15 +20,16 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b bg-card">
+      <header className="border-b bg-card sticky top-0 z-50">
         <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-          <h1
-            className="text-xl font-bold cursor-pointer hover:opacity-80 transition-opacity"
+          <div
+            className="flex items-center gap-2 text-xl font-bold cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => router.push(isAuthenticated ? '/dashboard' : '/')}
           >
-            Financial Sentiment Analysis
-          </h1>
-          <nav className="flex items-center space-x-2 md:space-x-4">
+            <Globe className="h-6 w-6" />
+            <h1>Sentient Stocks</h1>
+          </div>
+          <nav className="flex items-center space-x-1 md:space-x-2">
             {isAuthenticated ? (
               <>
                 <Button variant="ghost" onClick={() => router.push('/dashboard')}>Dashboard</Button>

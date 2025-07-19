@@ -1,10 +1,71 @@
 import { useRouter } from 'next/router'
 import { useAuth } from '@/context/AuthContext'
 import { useEffect } from 'react'
+import { Button } from '@/components/ui/button'
+import { ArrowRight, BarChart, Newspaper, BrainCircuit, ShieldCheck, Zap } from 'lucide-react'
+import { ModeToggle } from '@/components/ui/mode-toggle'
+import dynamic from "next/dynamic";
+import { BentoCard, BentoGrid } from '@/components/ui/bento-grid'
+import { Globe as GlobeIcon } from 'lucide-react'
+import { useTheme } from "next-themes";
+
+const World = dynamic(() => import("../components/ui/globe").then((m) => m.default), {
+  ssr: false,
+  loading: () => <div className="w-full h-full bg-transparent" />,
+});
+
+const features = [
+  {
+    Icon: Newspaper,
+    name: "Real-time News Aggregation",
+    description: "Connect your portfolio and receive a curated feed of financial news from top-tier sources, updated in real-time.",
+    href: "/",
+    cta: "Learn more",
+    background: <div className="absolute inset-0 bg-gradient-to-br from-blue-100 to-transparent dark:from-blue-900/20 dark:to-transparent opacity-30"></div>,
+    className: "lg:col-start-1 lg:col-end-2 lg:row-start-1 lg:row-end-3",
+  },
+  {
+    Icon: BrainCircuit,
+    name: "AI-Powered Sentiment Analysis",
+    description: "Our advanced models analyze each news article to provide a clear sentiment score, helping you cut through the noise.",
+    href: "/",
+    cta: "Learn more",
+    background: <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-transparent dark:from-green-900/20 dark:to-transparent opacity-30"></div>,
+    className: "lg:col-start-2 lg:col-end-3 lg:row-start-1 lg:row-end-2",
+  },
+  {
+    Icon: BarChart,
+    name: "Actionable Recommendations",
+    description: "Get data-driven 'buy', 'sell', or 'hold' signals based on aggregated sentiment trends for your specific assets.",
+    href: "/",
+    cta: "Learn more",
+    background: <div className="absolute inset-0 bg-gradient-to-br from-red-100 to-transparent dark:from-red-900/20 dark:to-transparent opacity-30"></div>,
+    className: "lg:col-start-2 lg:col-end-3 lg:row-start-2 lg:row-end-3",
+  },
+  {
+    Icon: ShieldCheck,
+    name: "Secure Portfolio Management",
+    description: "Upload and manage your holdings with confidence. Your data is encrypted and secure.",
+    href: "/",
+    cta: "Learn more",
+    background: <div className="absolute inset-0 bg-gradient-to-br from-purple-100 to-transparent dark:from-purple-900/20 dark:to-transparent opacity-30"></div>,
+    className: "lg:col-start-3 lg:col-end-4 lg:row-start-1 lg:row-end-2",
+  },
+    {
+    Icon: Zap,
+    name: "Lightning Fast Insights",
+    description: "Our optimized backend processes data instantly, so you never miss a market-moving moment.",
+    href: "/",
+    cta: "Learn more",
+    background: <div className="absolute inset-0 bg-gradient-to-br from-yellow-100 to-transparent dark:from-yellow-900/20 dark:to-transparent opacity-30"></div>,
+    className: "lg:col-start-3 lg:col-end-4 lg:row-start-2 lg:row-end-3",
+  },
+];
 
 export default function Home() {
   const router = useRouter()
   const { isAuthenticated } = useAuth()
+  const { theme } = useTheme();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -12,53 +73,120 @@ export default function Home() {
     }
   }, [isAuthenticated, router])
 
+  const lightGlobeConfig = {
+    pointSize: 4,
+    globeColor: "#e5e7eb",
+    showAtmosphere: true,
+    atmosphereColor: "#a7c4e2",
+    atmosphereAltitude: 0.1,
+    emissive: "#f3f4f6",
+    emissiveIntensity: 0.1,
+    shininess: 0.9,
+    polygonColor: "rgba(0,0,0,0.1)",
+    ambientLight: "#a7c4e2",
+    directionalLeftLight: "#ffffff",
+    directionalTopLight: "#ffffff",
+    pointLight: "#ffffff",
+  };
+
+  const darkGlobeConfig = {
+    pointSize: 4,
+    globeColor: "#1d223a",
+    showAtmosphere: true,
+    atmosphereColor: "#ffffff",
+    atmosphereAltitude: 0.1,
+    emissive: "#1d223a",
+    emissiveIntensity: 0.1,
+    shininess: 0.9,
+    polygonColor: "rgba(255,255,255,0.7)",
+    ambientLight: "#384554",
+    directionalLeftLight: "#ffffff",
+    directionalTopLight: "#ffffff",
+    pointLight: "#ffffff",
+  };
+
+  const N = 30;
+  const arcsData = [...Array(N).keys()].map(() => ({
+    startLat: (Math.random() - 0.5) * 180,
+    startLng: (Math.random() - 0.5) * 360,
+    endLat: (Math.random() - 0.5) * 180,
+    endLng: (Math.random() - 0.5) * 360,
+    color: theme === 'dark'
+      ? ['#6366f1', '#8b5cf6', '#ec4899'] [Math.round(Math.random() * 2)]
+      : ['#1e40af', '#6d28d9', '#be185d'] [Math.round(Math.random() * 2)],
+  }));
+
+  const pointsData = [...Array(200).keys()].map(() => ({
+    lat: (Math.random() - 0.5) * 180,
+    lng: (Math.random() - 0.5) * 360,
+    size: Math.random() / 3,
+    color: theme === 'dark' ? 'white' : 'black'
+  }));
+
+
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 to-black text-white overflow-hidden">
-      {/* Modern financial-ish background animation */}
-      <div className="absolute inset-0 z-0 overflow-hidden">
-        <div className="absolute inset-0 bg-grid-pattern opacity-10 animate-grid-pan"></div>
-      </div>
+    <div className="min-h-screen w-full bg-background text-foreground overflow-x-hidden">
+      <header className="container mx-auto h-20 flex items-center justify-between px-4 z-30 relative">
+        <div className="flex items-center gap-2 text-xl font-bold">
+            <GlobeIcon className="h-6 w-6"/>
+            <h1>Sentient Stocks</h1>
+        </div>
+        <nav className="flex items-center gap-2">
+          <ModeToggle />
+          <Button variant="ghost" onClick={() => router.push('/login')}>Login</Button>
+          <Button onClick={() => router.push('/register')}>Get Started <ArrowRight className="ml-2 h-4 w-4" /></Button>
+        </nav>
+      </header>
 
-      <div className="relative z-10 flex flex-col items-center justify-center text-center px-4 py-8">
-        <h1 className="text-5xl md:text-7xl font-extrabold leading-tight mb-6 animate-fade-in-up">
-          Financial Sentiment Analysis
-        </h1>
-        <p className="text-lg md:text-xl max-w-2xl mb-10 opacity-0 animate-fade-in animation-delay-500">
-          Aggregate your financial news, analyze market sentiment, and get AI-driven recommendations to make informed investment decisions.
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mb-12">
-          <div className="bg-white bg-opacity-10 p-6 rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-300 opacity-0 animate-fade-in animation-delay-1000">
-            <h3 className="text-2xl font-semibold mb-3">Aggregate News</h3>
-            <p className="text-gray-300">Collect and organize financial news from various sources in one place.</p>
-          </div>
-          <div className="bg-white bg-opacity-10 p-6 rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-300 opacity-0 animate-fade-in animation-delay-1500">
-            <h3 className="text-2xl font-semibold mb-3">Analyze Sentiment</h3>
-            <p className="text-gray-300">Understand the market's mood with AI-powered sentiment analysis.</p>
-          </div>
-          <div className="bg-white bg-opacity-10 p-6 rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-300 opacity-0 animate-fade-in animation-delay-2000">
-            <h3 className="text-2xl font-semibold mb-3">AI Recommendations</h3>
-            <p className="text-gray-300">Receive intelligent buy/sell/hold recommendations based on data.</p>
+      <main className="relative">
+        <div className="container mx-auto text-center pt-20 pb-32 md:pt-32 md:pb-48 relative z-20">
+          <h2 className="text-4xl md:text-7xl font-extrabold tracking-tight leading-tight mb-6 animate-fade-in-up bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">
+            The Market Doesn't Wait. <br /> Neither Should You.
+          </h2>
+          <p className="text-lg md:text-xl max-w-3xl mx-auto text-muted-foreground mb-10 opacity-0 animate-fade-in animation-delay-500">
+            Harness institutional-grade AI sentiment analysis to get a real-time edge on your investments. Make smarter, faster, data-driven decisions.
+          </p>
+          <div className="opacity-0 animate-fade-in animation-delay-1000">
+            <Button size="lg" onClick={() => router.push('/register')} className="animate-background-shine bg-[length:200%_100%] bg-gradient-to-r from-primary via-primary/80 to-primary text-primary-foreground">
+              Analyze My Portfolio Now
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
           </div>
         </div>
 
-        {!isAuthenticated && (
-          <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 opacity-0 animate-fade-in animation-delay-2500">
-            <button
-              className="px-10 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-full text-xl font-bold shadow-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-500 focus:ring-opacity-50"
-              onClick={() => router.push('/login')}
-            >
-              Login
-            </button>
-            <button
-              className="px-10 py-4 border-2 border-purple-600 text-purple-400 rounded-full text-xl font-bold shadow-lg hover:bg-purple-600 hover:text-white transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-500 focus:ring-opacity-50"
-              onClick={() => router.push('/register')}
-            >
-              Register
-            </button>
-          </div>
-        )}
-      </div>
+        <div className="absolute -top-48 md:-top-80 left-1/2 -translate-x-1/2 w-full h-[1000px] z-10">
+            <World
+              data={{ points: pointsData, arcs: arcsData }}
+              globeConfig={theme === 'dark' ? darkGlobeConfig : lightGlobeConfig}
+            />
+        </div>
+      </main>
+
+      <section className="container mx-auto py-24 px-4">
+        <h3 className="text-4xl font-bold text-center mb-12">An Unfair Advantage</h3>
+        <BentoGrid>
+          {features.map((feature) => (
+            <BentoCard key={feature.name} {...feature} />
+          ))}
+        </BentoGrid>
+      </section>
+
+      <section className="bg-muted/50 dark:bg-hero-gradient py-24">
+        <div className="container mx-auto text-center">
+            <h3 className="text-4xl font-bold mb-4">Ready to Elevate Your Strategy?</h3>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-8">
+                Stop guessing. Start analyzing. Create your free account and get immediate insights into what the market is *really* thinking about your stocks.
+            </p>
+            <Button size="lg" onClick={() => router.push('/register')}>
+              Get Started for Free
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+        </div>
+      </section>
+
+      <footer className="container mx-auto py-8 text-center text-muted-foreground text-sm">
+        <p>&copy; {new Date().getFullYear()} Sentient Stocks. All Rights Reserved.</p>
+      </footer>
     </div>
   )
 }
