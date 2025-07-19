@@ -2,28 +2,37 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useMutation } from "@apollo/client"
+import { useMutation, ApolloError } from "@apollo/client"
 import { REGISTER_USER } from "./graphql/mutations"
 import { useState } from "react"
 import { useRouter } from "next/router"
+import { useAuth } from "@/context/AuthContext"
 
 export default function RegisterPage() {
-  const [name, setName] = useState("")
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [register, { data, loading, error }] = useMutation(REGISTER_USER)
+  const [displayError, setDisplayError] = useState<string | null>(null)
+  const [registerMutation, { loading }] = useMutation(REGISTER_USER)
   const router = useRouter()
+  const { login } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setDisplayError(null) // Clear previous errors
     try {
-      const { data } = await register({ variables: { name, email, password } })
-      if (data.register.token) {
-        localStorage.setItem("token", data.register.token)
-        router.push("/")
+      const { data } = await registerMutation({ variables: { input: { firstName, lastName, email, password } } })
+      if (data.register.accessToken) {
+        login(data.register.accessToken)
+        router.push("/dashboard")
       }
-    } catch (error) {
-      console.error(error)
+    } catch (err) {
+      if (err instanceof ApolloError) {
+        setDisplayError(err.message)
+      } else {
+        setDisplayError("An unexpected error occurred.")
+      }
     }
   }
 
@@ -38,8 +47,12 @@ export default function RegisterPage() {
         </CardHeader>
         <CardContent className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="name">Name</Label>
-            <Input id="name" placeholder="John Doe" required onChange={(e) => setName(e.target.value)} />
+            <Label htmlFor="firstName">First Name</Label>
+            <Input id="firstName" placeholder="John" required onChange={(e) => setFirstName(e.target.value)} />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="lastName">Last Name</Label>
+            <Input id="lastName" placeholder="Doe" required onChange={(e) => setLastName(e.target.value)} />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="email">Email</Label>
@@ -53,7 +66,13 @@ export default function RegisterPage() {
         <CardFooter>
           <Button className="w-full" onClick={handleSubmit} disabled={loading}>{loading ? "Creating account..." : "Create account"}</Button>
         </CardFooter>
-        {error && <p className="text-red-500 text-center">{error.message}</p>}
+        {displayError && <p className="text-red-500 text-center text-sm mt-2">{displayError}</p>}
+        <p className="text-center text-sm text-muted-foreground mt-4">
+          Already have an account?{" "}
+          <a href="/login" className="underline underline-offset-4 hover:text-primary">
+            Login
+          </a>
+        </p>
       </Card>
     </div>
   )

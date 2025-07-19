@@ -1,3 +1,3 @@
-from app.schemas import schema
+from .schema import schema
 
 __all__ = ["schema"]

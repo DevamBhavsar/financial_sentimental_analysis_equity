@@ -9,11 +9,11 @@ export const GET_DASHBOARD_DATA = gql`
       worstPerformingAsset
       holdings {
         id
-        symbol
+        ticker
+        name
         quantity
-        price
-        sentiment
-        recommendation
+        avgPrice
+        sector
       }
     }
   }

@@ -1,4 +1,3 @@
-# app/database.py
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import declarative_base
 import redis.asyncio as aioredis
@@ -11,7 +10,7 @@ print(settings.DATABASE_URL)  # Database
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.debug,
-    connect_args={"check_same_thread": False},
+    
 )
 
 

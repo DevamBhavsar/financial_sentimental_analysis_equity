@@ -1,5 +1,5 @@
 import strawberry
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 
@@ -68,10 +68,19 @@ class Watchlist:
 
 @strawberry.type
 class AuthPayload:
-    access_token: str
+    accessToken: str
     token_type: str
     expires_in: int
     user: User
+
+
+@strawberry.type
+class DashboardData:
+    totalHoldings: float
+    overallSentiment: str
+    topPerformingAsset: str
+    worstPerformingAsset: str
+    holdings: List[Holding]
 
 
 @strawberry.input
