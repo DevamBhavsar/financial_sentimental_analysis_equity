@@ -40,10 +40,11 @@ from .converters import (
 class Query:
     @strawberry.field
     async def dashboard(self, info: Info) -> DashboardData:
-        if "current_user" not in info.context:
+        current_user = info.context.get("current_user")
+        if not current_user:
             raise Exception("Authentication required")
         db = info.context["db"]
-        current_user = info.context["current_user"]
+        # current_user = info.context["current_user"]
 
         # Fetch holdings
         result = await db.execute(
@@ -70,17 +71,18 @@ class Query:
 
     @strawberry.field
     async def me(self, info: Info) -> User:
-        if "current_user" not in info.context:
+        current_user = info.context.get("current_user")
+        if not current_user:
             raise Exception("Authentication required")
-        current_user = info.context["current_user"]
+
         return user_to_graphql(current_user)
 
     @strawberry.field
     async def holdings(self, info: Info) -> List[Holding]:
-        if "current_user" not in info.context:
+        current_user = info.context.get("current_user")
+        if not current_user:
             raise Exception("Authentication required")
         db = info.context["db"]
-        current_user = info.context["current_user"]
 
         result = await db.execute(
             select(HoldingModel).where(HoldingModel.user_id == current_user.id)
@@ -91,10 +93,10 @@ class Query:
 
     @strawberry.field
     async def watchlist(self, info: Info) -> List[Watchlist]:
-        if "current_user" not in info.context:
+        current_user = info.context.get("current_user")
+        if not current_user:
             raise Exception("Authentication required")
         db = info.context["db"]
-        current_user = info.context["current_user"]
 
         result = await db.execute(
             select(WatchlistModel).where(WatchlistModel.user_id == current_user.id)
@@ -208,11 +210,11 @@ class Mutation:
 
     @strawberry.field
     async def add_holding(self, info: Info, input: HoldingInput) -> Holding:
-        if "current_user" not in info.context:
+        current_user = info.context.get("current_user")
+        if not current_user:
             raise Exception("Authentication required")
 
         db = info.context["db"]
-        current_user = info.context["current_user"]
 
         holding = HoldingModel(
             user_id=current_user.id,
@@ -231,14 +233,12 @@ class Mutation:
         return holding_to_graphql(holding)
 
     @strawberry.field
-    async def add_to_watchlist(
-        self, info: Info, input: WatchlistInput
-    ) -> Watchlist:
-        if "current_user" not in info.context:
+    async def add_to_watchlist(self, info: Info, input: WatchlistInput) -> Watchlist:
+        current_user = info.context.get("current_user")
+        if not current_user:
             raise Exception("Authentication required")
 
         db = info.context["db"]
-        current_user = info.context["current_user"]
 
         watchlist = WatchlistModel(
             user_id=current_user.id,
@@ -255,11 +255,11 @@ class Mutation:
 
     @strawberry.field
     async def remove_holding(self, info: Info, id: int) -> bool:
-        if "current_user" not in info.context:
+        current_user = info.context.get("current_user")
+        if not current_user:
             raise Exception("Authentication required")
 
         db = info.context["db"]
-        current_user = info.context["current_user"]
 
         result = await db.execute(
             select(HoldingModel).where(
@@ -277,11 +277,11 @@ class Mutation:
 
     @strawberry.field
     async def remove_from_watchlist(self, info: Info, id: int) -> bool:
-        if "current_user" not in info.context:
+        current_user = info.context.get("current_user")
+        if not current_user:
             raise Exception("Authentication required")
 
         db = info.context["db"]
-        current_user = info.context["current_user"]
 
         result = await db.execute(
             select(WatchlistModel).where(

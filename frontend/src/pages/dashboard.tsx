@@ -9,12 +9,12 @@ import { useQuery } from '@apollo/client'
 import { useRouter } from 'next/router'
 import { useEffect } from 'react'
 
-// FIX 1: Import Moon, Sun, and useTheme
+
 import { Moon, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
 
 export default function DashboardPage() {
-  // FIX 2: Instantiate useTheme to get the setTheme function
+
   const { setTheme } = useTheme()
   const { loading, error, data } = useQuery(GET_DASHBOARD_DATA)
   const router = useRouter()
@@ -26,7 +26,7 @@ export default function DashboardPage() {
     }
   }, [router])
 
-  // FIX 3: Define the handleLogout function
+
   const handleLogout = () => {
     localStorage.removeItem('token')
     router.push('/login')
