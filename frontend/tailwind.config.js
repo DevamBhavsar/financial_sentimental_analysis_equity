@@ -77,6 +77,18 @@ module.exports = {
           from: { "background-position": "0% 0%" },
           to: { "background-position": "100% 100%" },
         },
+        "background-shine": {
+          from: { backgroundPosition: "0 0" },
+          to: { backgroundPosition: "-200% 0" },
+        },
+        "beams": {
+          "0%": { opacity: 0 },
+          "10%": { opacity: 1 },
+          "50%": { opacity: 1 },
+          "60%": { opacity: 0 },
+          "100%": { opacity: 0 },
+        },
+
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -84,6 +96,8 @@ module.exports = {
         "fade-in-up": "fade-in-up 0.6s ease-out forwards",
         "fade-in": "fade-in 0.6s ease-out forwards",
         "grid-pan": "grid-pan 60s linear infinite",
+        "background-shine": "background-shine 2s linear infinite",
+        "beams": "beams 6s linear infinite",
       },
     },
   },
