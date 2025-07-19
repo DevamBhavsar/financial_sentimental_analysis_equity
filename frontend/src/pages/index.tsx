@@ -4,14 +4,13 @@ import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { ArrowRight, BarChart, Newspaper, BrainCircuit, ShieldCheck, Zap } from 'lucide-react'
 import { ModeToggle } from '@/components/ui/mode-toggle'
-import dynamic from "next/dynamic";
 import { BentoCard, BentoGrid } from '@/components/ui/bento-grid'
 import { Globe as GlobeIcon } from 'lucide-react'
-import { useTheme } from "next-themes";
+import dynamic from 'next/dynamic'
 
-const World = dynamic(() => import("../components/ui/globe").then((m) => m.default), {
+// Dynamically import the new HeroAnimation component
+const HeroAnimation = dynamic(() => import("../components/ui/HeroAnimation").then((m) => m.default), {
   ssr: false,
-  loading: () => <div className="w-full h-full bg-transparent" />,
 });
 
 const features = [
@@ -51,7 +50,7 @@ const features = [
     background: <div className="absolute inset-0 bg-gradient-to-br from-purple-100 to-transparent dark:from-purple-900/20 dark:to-transparent opacity-30"></div>,
     className: "lg:col-start-3 lg:col-end-4 lg:row-start-1 lg:row-end-2",
   },
-    {
+  {
     Icon: Zap,
     name: "Lightning Fast Insights",
     description: "Our optimized backend processes data instantly, so you never miss a market-moving moment.",
@@ -65,7 +64,6 @@ const features = [
 export default function Home() {
   const router = useRouter()
   const { isAuthenticated } = useAuth()
-  const { theme } = useTheme();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -73,59 +71,8 @@ export default function Home() {
     }
   }, [isAuthenticated, router])
 
-  const lightGlobeConfig = {
-    pointSize: 4,
-    globeColor: "#e5e7eb",
-    showAtmosphere: true,
-    atmosphereColor: "#a7c4e2",
-    atmosphereAltitude: 0.1,
-    emissive: "#f3f4f6",
-    emissiveIntensity: 0.1,
-    shininess: 0.9,
-    polygonColor: "rgba(0,0,0,0.1)",
-    ambientLight: "#a7c4e2",
-    directionalLeftLight: "#ffffff",
-    directionalTopLight: "#ffffff",
-    pointLight: "#ffffff",
-  };
-
-  const darkGlobeConfig = {
-    pointSize: 4,
-    globeColor: "#1d223a",
-    showAtmosphere: true,
-    atmosphereColor: "#ffffff",
-    atmosphereAltitude: 0.1,
-    emissive: "#1d223a",
-    emissiveIntensity: 0.1,
-    shininess: 0.9,
-    polygonColor: "rgba(255,255,255,0.7)",
-    ambientLight: "#384554",
-    directionalLeftLight: "#ffffff",
-    directionalTopLight: "#ffffff",
-    pointLight: "#ffffff",
-  };
-
-  const N = 30;
-  const arcsData = [...Array(N).keys()].map(() => ({
-    startLat: (Math.random() - 0.5) * 180,
-    startLng: (Math.random() - 0.5) * 360,
-    endLat: (Math.random() - 0.5) * 180,
-    endLng: (Math.random() - 0.5) * 360,
-    color: theme === 'dark'
-      ? ['#6366f1', '#8b5cf6', '#ec4899'] [Math.round(Math.random() * 2)]
-      : ['#1e40af', '#6d28d9', '#be185d'] [Math.round(Math.random() * 2)],
-  }));
-
-  const pointsData = [...Array(200).keys()].map(() => ({
-    lat: (Math.random() - 0.5) * 180,
-    lng: (Math.random() - 0.5) * 360,
-    size: Math.random() / 3,
-    color: theme === 'dark' ? 'white' : 'black'
-  }));
-
-
   return (
-    <div className="min-h-screen w-full bg-background text-foreground overflow-x-hidden">
+    <div className="min-h-screen w-full bg-background text-foreground overflow-hidden">
       <header className="container mx-auto h-20 flex items-center justify-between px-4 z-30 relative">
         <div className="flex items-center gap-2 text-xl font-bold">
             <GlobeIcon className="h-6 w-6"/>
@@ -154,11 +101,9 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="absolute -top-48 md:-top-80 left-1/2 -translate-x-1/2 w-full h-[1000px] z-10">
-            <World
-              data={{ points: pointsData, arcs: arcsData }}
-              globeConfig={theme === 'dark' ? darkGlobeConfig : lightGlobeConfig}
-            />
+        {/* ✅ Increased opacity for better visibility in both themes */}
+        <div className="absolute top-0 left-0 w-full h-[800px] z-10 opacity-50 dark:opacity-60">
+            <HeroAnimation />
         </div>
       </main>
 
@@ -171,7 +116,7 @@ export default function Home() {
         </BentoGrid>
       </section>
 
-      <section className="bg-muted/50 dark:bg-hero-gradient py-24">
+      <section className="bg-muted/50 dark:bg-background/20 py-24">
         <div className="container mx-auto text-center">
             <h3 className="text-4xl font-bold mb-4">Ready to Elevate Your Strategy?</h3>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-8">
