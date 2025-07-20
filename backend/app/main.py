@@ -20,7 +20,7 @@ security = HTTPBearer(auto_error=False)
 # Configure CORS with proper file upload headers
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Be specific for development
+    allow_origins=["*"],  # Be specific for development
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=[
@@ -29,7 +29,7 @@ app.add_middleware(
         "Accept",
         "Origin",
         "X-Requested-With",
-        "apollo-require-preflight"  # Important for Apollo uploads
+        "apollo-require-preflight"  
     ],
 )
 

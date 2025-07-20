@@ -3,10 +3,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useMutation, ApolloError } from "@apollo/client"
-import { REGISTER_USER } from "./graphql/mutations"
+import { REGISTER_USER } from "@/graphql/mutations"
 import { useState } from "react"
 import { useRouter } from "next/router"
-import { useAuth } from "@/context/AuthContext"
+import { useAuth } from "@/contexts/AuthContext"
 import { AlertCircle } from "lucide-react"
 import Link from "next/link"
 import { ModeToggle } from "@/components/ui/mode-toggle"
@@ -25,16 +25,18 @@ export default function RegisterPage() {
     e.preventDefault()
     setDisplayError(null)
     try {
-      const { data } = await registerMutation({ variables: { input: { firstName, lastName, email, password } } })
+      const { data } = await registerMutation({ variables: { input: { first_name: firstName, last_name: lastName, email, password } } })
       if (data.register.accessToken) {
         login(data.register.accessToken)
         router.push("/dashboard")
       }
     } catch (err) {
       if (err instanceof ApolloError) {
-        setDisplayError(err.message)
+        // Extract the actual error message from GraphQL errors
+        const errorMessage = err.graphQLErrors?.[0]?.message || err.message || "Registration failed";
+        setDisplayError(errorMessage);
       } else {
-        setDisplayError("An unexpected error occurred.")
+        setDisplayError("An unexpected error occurred. Please try again.");
       }
     }
   }
@@ -45,9 +47,9 @@ export default function RegisterPage() {
             <ModeToggle />
         </div>
         <div className="hidden bg-muted lg:block">
-            <div className="flex flex-col justify-center items-center h-full p-12 text-center bg-gradient-to-br from-gray-900 to-black text-white">
+            <div className="flex flex-col justify-center items-center h-full p-12 text-center bg-gradient-to-br from-primary to-primary/80 text-primary-foreground">
                 <h2 className="text-4xl font-bold">Start Your Journey</h2>
-                <p className="mt-4 text-lg text-gray-300">Gain an edge with AI-powered market insights today.</p>
+                <p className="mt-4 text-lg text-primary-foreground/80">Gain an edge with AI-powered market insights today.</p>
             </div>
         </div>
         <div className="flex items-center justify-center py-12">

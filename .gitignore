@@ -39,6 +39,8 @@ venv/
 env/
 *.env
 
+frontend/.env.local
+
 # Python cache files
 __pycache__/
 *.py[cod]
@@ -85,6 +87,9 @@ pnpm-debug.log*
 # Other
 /next-env.d.ts
 
+
 # --- Datasets ---
 # Ignoring datasets folder
 datasets/
+
+frontend/.env.local
