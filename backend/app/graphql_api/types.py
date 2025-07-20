@@ -26,6 +26,17 @@ class LoginInput:
     email: str
     password: str
 
+@strawberry.input
+class UpdateProfileInput:
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+
+@strawberry.input
+class ChangePasswordInput:
+    current_password: str
+    new_password: str
+
 @strawberry.type
 class AuthPayload:
     accessToken: str
@@ -142,11 +153,24 @@ class Sentiment:
     created_at: datetime
 
 @strawberry.type
-class DashboardData:
+class PortfolioSummary:
     totalMarketValue: float
+    totalInvestedValue: float
+    totalGainLoss: float
+    totalGainLossPercent: float
+    todaysGainLoss: float
+    todaysGainLossPercent: float
+    totalDividends: float
+    avgGainLossPercent: float
+    
+@strawberry.type
+class DashboardData:
+    portfolio: PortfolioSummary
     overallSentiment: str
     topPerformingAsset: str
     worstPerformingAsset: str
+    totalStocks: int
+    sectorsCount: int
     holdings: List[Holding]
 
 @strawberry.type
@@ -154,3 +178,6 @@ class UploadHoldingsResponse:
     success: bool
     message: str
     count: Optional[int] = 0
+    created: Optional[int] = 0
+    updated: Optional[int] = 0
+    skipped: Optional[int] = 0

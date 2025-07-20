@@ -19,8 +19,8 @@ export const REGISTER_USER = gql`
       user {
         id
         email
-        firstName
-        lastName
+        first_name
+        last_name
       }
     }
   }
@@ -31,6 +31,10 @@ export const UPLOAD_HOLDINGS = gql`
     upload_holdings(file: $file) {
       success
       message
+      count
+      created
+      updated
+      skipped
     }
   }
 `;

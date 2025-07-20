@@ -1,5 +1,4 @@
 import { Layout } from "@/components/layouts/Layout";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,19 +10,26 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { FullscreenUploadAnimation } from "@/components/ui/fullscreen-upload-animation";
 import { validateExcelTemplate, readExcelFile } from "@/lib/excel";
 import { useMutation } from "@apollo/client";
 import { UploadCloud } from "lucide-react";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
-import { UPLOAD_HOLDINGS } from "./graphql/mutations";
+import { UPLOAD_HOLDINGS } from "@/graphql/mutations";
+import { GET_DASHBOARD_DATA } from "@/graphql/queries";
 
 export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [uploadHoldings] = useMutation(UPLOAD_HOLDINGS);
+  const [uploadResult, setUploadResult] = useState<any | null>(null);
+  const [showFullscreenAnimation, setShowFullscreenAnimation] = useState(false);
+  const [uploadHoldings] = useMutation(UPLOAD_HOLDINGS, {
+    refetchQueries: [{ query: GET_DASHBOARD_DATA }],
+    awaitRefetchQueries: true,
+  });
   const router = useRouter();
 
   useEffect(() => {
@@ -67,6 +73,7 @@ export default function UploadPage() {
       setUploading(true);
       setProgress(0);
       setError(null);
+      setUploadResult(null);
 
       const { data } = await uploadHoldings({
         variables: { file },
@@ -81,13 +88,15 @@ export default function UploadPage() {
         },
       });
 
-      if (data.uploadHoldings.success) {
-        router.push("/dashboard");
+      if (data.upload_holdings.success) {
+        setUploadResult(data.upload_holdings);
+        setShowFullscreenAnimation(true);
       } else {
-        throw new Error(data.uploadHoldings.message);
+        throw new Error(data.upload_holdings.message);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
+      setShowFullscreenAnimation(true);
     } finally {
       setUploading(false);
     }
@@ -142,12 +151,7 @@ export default function UploadPage() {
                   </p>
                 </div>
               )}
-              {error && (
-                <Alert variant="destructive">
-                  <AlertTitle>Error</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
+              {/* Animations are now handled by full-screen overlay */}
               <Button
                 type="submit"
                 className="w-full"
@@ -159,6 +163,18 @@ export default function UploadPage() {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Full-screen upload animation */}
+      <FullscreenUploadAnimation
+        isVisible={showFullscreenAnimation}
+        uploadResult={uploadResult}
+        error={error}
+        onComplete={() => {
+          setShowFullscreenAnimation(false);
+          setUploadResult(null);
+          setError(null);
+        }}
+      />
     </Layout>
   );
 }
