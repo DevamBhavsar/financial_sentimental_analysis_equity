@@ -1,21 +1,21 @@
-import { ReactNode } from 'react'
-import { useRouter } from 'next/router'
-import { Button } from '@/components/ui/button'
-import { useAuth } from '@/context/AuthContext'
-import { ModeToggle } from '@/components/ui/mode-toggle'
-import { Globe } from 'lucide-react'
+import { Button } from "@/components/ui/button";
+import { ModeToggle } from "@/components/ui/mode-toggle";
+import { useAuth } from "@/context/AuthContext";
+import { Globe } from "lucide-react";
+import { useRouter } from "next/router";
+import { ReactNode } from "react";
 
 interface LayoutProps {
-  children: ReactNode
+  children: ReactNode;
 }
 
 export function Layout({ children }: LayoutProps) {
-  const { isAuthenticated, logout } = useAuth()
-  const router = useRouter()
+  const { isAuthenticated, logout } = useAuth();
+  const router = useRouter();
 
   const handleLogout = () => {
     logout();
-    router.push('/login');
+    router.push("/login");
   };
 
   return (
@@ -24,31 +24,42 @@ export function Layout({ children }: LayoutProps) {
         <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
           <div
             className="flex items-center gap-2 text-xl font-bold cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={() => router.push(isAuthenticated ? '/dashboard' : '/')}
+            onClick={() => router.push(isAuthenticated ? "/dashboard" : "/")}
           >
             <Globe className="h-6 w-6" />
-            <h1>Sentient Stocks</h1>
+            <h1>SSA</h1>
           </div>
           <nav className="flex items-center space-x-1 md:space-x-2">
             {isAuthenticated ? (
               <>
-                <Button variant="ghost" onClick={() => router.push('/dashboard')}>Dashboard</Button>
-                <Button variant="ghost" onClick={() => router.push('/upload')}>Upload</Button>
-                <Button variant="ghost" onClick={handleLogout}>Logout</Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => router.push("/dashboard")}
+                >
+                  Dashboard
+                </Button>
+                <Button variant="ghost" onClick={() => router.push("/upload")}>
+                  Upload
+                </Button>
+                <Button variant="ghost" onClick={handleLogout}>
+                  Logout
+                </Button>
               </>
             ) : (
               <>
-                <Button variant="ghost" onClick={() => router.push('/login')}>Login</Button>
-                <Button onClick={() => router.push('/register')}>Register</Button>
+                <Button variant="ghost" onClick={() => router.push("/login")}>
+                  Login
+                </Button>
+                <Button onClick={() => router.push("/register")}>
+                  Register
+                </Button>
               </>
             )}
             <ModeToggle />
           </nav>
         </div>
       </header>
-      <main className="container mx-auto py-6 sm:px-6 lg:px-8">
-        {children}
-      </main>
+      <main className="container mx-auto py-6 sm:px-6 lg:px-8">{children}</main>
     </div>
-  )
+  );
 }

@@ -1,50 +1,97 @@
-import { Layout } from '@/components/layouts/Layout'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { useMutation } from '@apollo/client'
-import { UPLOAD_HOLDINGS } from './graphql/mutations'
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/router'
-import { UploadCloud } from 'lucide-react'
+import { Layout } from "@/components/layouts/Layout";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { validateExcelTemplate, readExcelFile } from "@/lib/excel";
+import { useMutation } from "@apollo/client";
+import { UploadCloud } from "lucide-react";
+import { useRouter } from "next/router";
+import { useEffect, useState } from "react";
+import { UPLOAD_HOLDINGS } from "./graphql/mutations";
 
 export default function UploadPage() {
-  const [file, setFile] = useState<File | null>(null)
-  const [uploadHoldings, { data, loading, error }] = useMutation(UPLOAD_HOLDINGS)
-  const router = useRouter()
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [uploadHoldings] = useMutation(UPLOAD_HOLDINGS);
+  const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem("token");
     if (!token) {
-      router.push('/login')
+      router.push("/login");
     }
-  }, [router])
+  }, [router]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0])
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
+
+    try {
+      // Validate file size
+      if (selectedFile.size > 10 * 1024 * 1024) {
+        throw new Error("File size must be less than 10MB");
+      }
+
+      // Read and validate Excel content
+      const data = await readExcelFile(selectedFile);
+      const validation = validateExcelTemplate(data);
+
+      if (!validation.isValid) {
+        throw new Error(validation.errors.join("\n"));
+      }
+
+      setFile(selectedFile);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Invalid file");
+      setFile(null);
     }
-  }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!file) return
-    try {
-      // This mutation needs to be implemented on the backend to handle file uploads
-      // For now, we'll simulate a successful upload and redirect.
-      console.log("Uploading file:", file.name)
-      // const { data } = await uploadHoldings({ variables: { file } })
-      // if (data.uploadHoldings.success) {
-      //   router.push('/dashboard')
-      // }
-      alert("File upload functionality needs to be connected to the backend. Simulating success.")
-      router.push('/dashboard')
+    e.preventDefault();
+    if (!file) return;
 
-    } catch (error) {
-      console.error(error)
+    try {
+      setUploading(true);
+      setProgress(0);
+      setError(null);
+
+      const { data } = await uploadHoldings({
+        variables: { file },
+        context: {
+          fetchOptions: {
+            onUploadProgress: (progressEvent: any) => {
+              const progress =
+                (progressEvent.loaded / progressEvent.total) * 100;
+              setProgress(Math.round(progress));
+            },
+          },
+        },
+      });
+
+      if (data.uploadHoldings.success) {
+        router.push("/dashboard");
+      } else {
+        throw new Error(data.uploadHoldings.message);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
     }
-  }
+  };
 
   return (
     <Layout>
@@ -53,7 +100,8 @@ export default function UploadPage() {
           <CardHeader>
             <CardTitle className="text-2xl">Upload Your Holdings</CardTitle>
             <CardDescription>
-              Upload an Excel (.xlsx) file with your mutual fund and equity holdings to get started.
+              Upload an Excel (.xlsx) file with your mutual fund and equity
+              holdings to get started.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -64,11 +112,20 @@ export default function UploadPage() {
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                       <UploadCloud className="w-10 h-10 mb-3 text-muted-foreground" />
                       <p className="mb-2 text-sm text-muted-foreground">
-                        <span className="font-semibold">Click to upload</span> or drag and drop
+                        <span className="font-semibold">Click to upload</span>{" "}
+                        or drag and drop
                       </p>
-                      <p className="text-xs text-muted-foreground">XLSX file (MAX. 10MB)</p>
+                      <p className="text-xs text-muted-foreground">
+                        XLSX file (MAX. 10MB)
+                      </p>
                     </div>
-                    <Input id="holdings-file" type="file" className="hidden" onChange={handleFileChange} accept=".xlsx" />
+                    <Input
+                      id="holdings-file"
+                      type="file"
+                      className="hidden"
+                      onChange={handleFileChange}
+                      accept=".xlsx, .csv"
+                    />
                   </div>
                 </Label>
               </div>
@@ -77,14 +134,31 @@ export default function UploadPage() {
                   Selected file: <strong>{file.name}</strong>
                 </div>
               )}
-              <Button type="submit" className="w-full" disabled={loading || !file}>
-                {loading ? "Uploading..." : "Upload and Analyze"}
+              {uploading && (
+                <div className="space-y-2">
+                  <Progress value={progress} />
+                  <p className="text-sm text-center text-muted-foreground">
+                    Uploading... {progress}%
+                  </p>
+                </div>
+              )}
+              {error && (
+                <Alert variant="destructive">
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={uploading || !file}
+              >
+                {uploading ? "Uploading..." : "Upload and Analyze"}
               </Button>
-              {error && <p className="text-red-500 text-center text-sm">{error.message}</p>}
             </form>
           </CardContent>
         </Card>
       </div>
     </Layout>
-  )
+  );
 }

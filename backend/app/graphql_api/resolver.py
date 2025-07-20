@@ -1,8 +1,20 @@
 import strawberry
 from strawberry.types import Info
+from strawberry.file_uploads import Upload
 from typing import List, Optional
 from datetime import datetime, timedelta
 from sqlalchemy import select, and_
+import logging
+
+
+class ValidationError(Exception):
+    pass
+
+
+class ProcessingError(Exception):
+    pass
+
+logger = logging.getLogger(__name__)
 
 # Fixed imports
 from ..models.user import User as UserModel
@@ -10,6 +22,8 @@ from ..models.holding import Holding as HoldingModel
 from ..models.article import Article as ArticleModel
 from ..models.sentiment import Sentiment as SentimentModel
 from ..models.watchlist import Watchlist as WatchlistModel
+from ..services.excel_service import ExcelService
+from ..services.holding_service import HoldingService
 
 # Fixed auth imports
 from ..auth.auth import authenticate_user, create_access_token, get_password_hash
@@ -26,6 +40,7 @@ from .types import (
     HoldingInput,
     WatchlistInput,
     DashboardData,
+    UploadHoldingsResponse,
 )
 from .converters import (
     user_to_graphql,
@@ -35,7 +50,6 @@ from .converters import (
     article_to_graphql,
 )
 
-
 @strawberry.type
 class Query:
     @strawberry.field
@@ -44,30 +58,33 @@ class Query:
         if not current_user:
             raise Exception("Authentication required")
         db = info.context["db"]
-        # current_user = info.context["current_user"]
 
-        # Fetch holdings
         result = await db.execute(
             select(HoldingModel).where(HoldingModel.user_id == current_user.id)
         )
         holdings = result.scalars().all()
 
-        # Calculate total holdings value
-        total_holdings_value = sum(h.quantity * h.avg_price for h in holdings)
+        if not holdings:
+            return DashboardData(
+                totalMarketValue=0,
+                overallSentiment="N/A",
+                topPerformingAsset="N/A",
+                worstPerformingAsset="N/A",
+                holdings=[]
+            )
 
-        # Dummy data for sentiment and performance for now
-        # In a real application, these would be calculated based on actual data
-        overall_sentiment = "Neutral"
-        top_performing_asset = "N/A"
-        worst_performing_asset = "N/A"
+        total_market_value = sum(h.market_value for h in holdings)
+        top_asset = max(holdings, key=lambda h: h.overall_gain_loss, default=None)
+        worst_asset = min(holdings, key=lambda h: h.overall_gain_loss, default=None)
 
         return DashboardData(
-            totalHoldings=total_holdings_value,
-            overallSentiment=overall_sentiment,
-            topPerformingAsset=top_performing_asset,
-            worstPerformingAsset=worst_performing_asset,
+            totalMarketValue=total_market_value,
+            overallSentiment="Neutral", # Placeholder
+            topPerformingAsset=top_asset.company_name if top_asset else "N/A",
+            worstPerformingAsset=worst_asset.company_name if worst_asset else "N/A",
             holdings=[holding_to_graphql(h) for h in holdings],
         )
+        
 
     @strawberry.field
     async def me(self, info: Info) -> User:
@@ -83,13 +100,12 @@ class Query:
         if not current_user:
             raise Exception("Authentication required")
         db = info.context["db"]
-
         result = await db.execute(
             select(HoldingModel).where(HoldingModel.user_id == current_user.id)
         )
-        holdings = result.scalars().all()
+        holdings_list = result.scalars().all()
+        return [holding_to_graphql(h) for h in holdings_list]
 
-        return [holding_to_graphql(h) for h in holdings]
 
     @strawberry.field
     async def watchlist(self, info: Info) -> List[Watchlist]:
@@ -142,7 +158,6 @@ class Query:
         articles = result.scalars().all()
 
         return [article_to_graphql(a) for a in articles]
-
 
 @strawberry.type
 class Mutation:
@@ -233,6 +248,78 @@ class Mutation:
         return holding_to_graphql(holding)
 
     @strawberry.field
+    async def upload_holdings(self, info: Info, file: Upload) -> UploadHoldingsResponse:
+        logger.info("=== UPLOAD_HOLDINGS MUTATION STARTED ===")
+        
+        try:
+            current_user = info.context.get("current_user")
+            if not current_user:
+                logger.error("No current user found in context")
+                raise ValidationError("Authentication required")
+            
+            logger.info(f"User authenticated: {current_user.id} - {current_user.email}")
+            
+            # Log file details
+            logger.info(f"Received file: {file.filename}")
+            logger.info(f"Content type: {file.content_type}")
+            
+            # Validate file type
+            if not file.filename.lower().endswith(('.xlsx', '.csv')):
+                logger.error(f"Invalid file type: {file.filename}")
+                raise ValidationError("Only Excel (.xlsx) or CSV files are allowed")
+            
+            # Read file content to check size
+            content = await file.read()
+            file_size = len(content)
+            logger.info(f"File size: {file_size} bytes ({file_size / (1024*1024):.2f} MB)")
+            
+            # Reset file pointer
+            await file.seek(0)
+            
+            # Validate file size (10MB limit)
+            if file_size > 10 * 1024 * 1024:
+                raise ValidationError("File size must be less than 10MB")
+            
+            # Process file
+            logger.info("Starting Excel processing...")
+            excel_service = ExcelService()
+            holdings_data = await excel_service.read_excel(file, file.filename)
+            logger.info(f"Excel processing completed. Found {len(holdings_data)} records")
+            
+            # Store holdings
+            logger.info("Starting database operations...")
+            holding_service = HoldingService()
+            result = await holding_service.bulk_create_holdings(
+                info.context["db"],
+                holdings_data,
+                current_user.id
+            )
+            
+            success_count = len(result)
+            logger.info(f"Database operations completed. Created {success_count} holdings")
+            
+            logger.info("=== UPLOAD_HOLDINGS MUTATION COMPLETED SUCCESSFULLY ===")
+            return UploadHoldingsResponse(
+                success=True,
+                message=f"Successfully processed {success_count} holdings",
+                count=success_count
+            )
+
+        except ValidationError as e:
+            logger.error(f"Validation error: {str(e)}")
+            return UploadHoldingsResponse(
+                success=False,
+                message=str(e),
+                count=0
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error in upload_holdings: {str(e)}", exc_info=True)
+            return UploadHoldingsResponse(
+                success=False,
+                message="An unexpected error occurred. Please try again.",
+                count=0
+            )
+    @strawberry.field
     async def add_to_watchlist(self, info: Info, input: WatchlistInput) -> Watchlist:
         current_user = info.context.get("current_user")
         if not current_user:
@@ -297,5 +384,10 @@ class Mutation:
         await db.commit()
         return True
 
+from strawberry.schema.config import StrawberryConfig
 
-schema = strawberry.Schema(query=Query, mutation=Mutation)
+schema = strawberry.Schema(
+    query=Query, 
+    mutation=Mutation, 
+    config=StrawberryConfig(auto_camel_case=False)
+)
