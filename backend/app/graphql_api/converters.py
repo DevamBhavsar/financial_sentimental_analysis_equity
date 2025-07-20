@@ -11,8 +11,8 @@ def user_to_graphql(user: UserModel) -> User:
     return User(
         id=int(user.id),  # type: ignore
         email=str(user.email),  # type: ignore
-        first_name=str(user.first_name),  # type: ignore
-        last_name=str(user.last_name),  # type: ignore
+        first_name=str(user.first_name) if user.first_name else None,  # type: ignore
+        last_name=str(user.last_name) if user.last_name else None,  # type: ignore
         is_active=bool(user.is_active),  # type: ignore
         created_at=user.created_at,  # type: ignore
         updated_at=user.updated_at,  # type: ignore
@@ -26,15 +26,29 @@ def holding_to_graphql(holding: HoldingModel) -> Holding:
         user_id=int(holding.user_id),  # type: ignore
         company_name=str(holding.company_name),  # type: ignore
         isin=str(holding.isin),  # type: ignore
-        market_cap=float(holding.market_cap),  # type: ignore
         sector=str(holding.sector),  # type: ignore
         total_quantity=int(holding.total_quantity),  # type: ignore
-        free_quantity=int(holding.free_quantity),  # type: ignore
         avg_trading_price=float(holding.avg_trading_price),  # type: ignore
         ltp=float(holding.ltp),  # type: ignore
         invested_value=float(holding.invested_value),  # type: ignore
         market_value=float(holding.market_value),  # type: ignore
         overall_gain_loss=float(holding.overall_gain_loss),  # type: ignore
+        
+        # Handle optional fields with proper null checking
+        client_id=str(holding.client_id) if holding.client_id is not None else None,  # type: ignore
+        market_cap=float(holding.market_cap) if holding.market_cap is not None else None,  # type: ignore
+        stcg_quantity=int(holding.stcg_quantity) if holding.stcg_quantity is not None else None,  # type: ignore
+        stcg_value=float(holding.stcg_value) if holding.stcg_value is not None else None,  # type: ignore
+        
+        # Commented fields for future use - uncomment when model is updated
+        # free_quantity=int(holding.free_quantity) if holding.free_quantity is not None else None,  # type: ignore
+        # unsettled_quantity=int(holding.unsettled_quantity) if holding.unsettled_quantity is not None else None,  # type: ignore
+        # margin_pledged_quantity=int(holding.margin_pledged_quantity) if holding.margin_pledged_quantity is not None else None,  # type: ignore
+        # paylater_mtf_quantity=int(holding.paylater_mtf_quantity) if holding.paylater_mtf_quantity is not None else None,  # type: ignore
+        # unpaid_cusa_qty=int(holding.unpaid_cusa_qty) if holding.unpaid_cusa_qty is not None else None,  # type: ignore
+        # blocked_qty=int(holding.blocked_qty) if holding.blocked_qty is not None else None,  # type: ignore
+        # ltcg_quantity=int(holding.ltcg_quantity) if holding.ltcg_quantity is not None else None,  # type: ignore
+        # ltcg_value=float(holding.ltcg_value) if holding.ltcg_value is not None else None,  # type: ignore
     )
 
 

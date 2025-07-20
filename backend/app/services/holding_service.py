@@ -21,6 +21,20 @@ class HoldingService:
             )
             existing_isin_set = set(row[0] for row in existing_isins.fetchall())
 
+            # Define the fields that are currently active in the SQLAlchemy model
+            allowed_fields = {
+                'client_id', 'company_name', 'isin', 'market_cap', 'sector',
+                'total_quantity', 'avg_trading_price', 'ltp', 'invested_value',
+                'market_value', 'overall_gain_loss', 'stcg_quantity', 'stcg_value'
+            }
+            
+            # Fields that are commented out in the model (will be filtered out)
+            commented_fields = {
+                'free_quantity', 'unsettled_quantity', 'margin_pledged_quantity',
+                'paylater_mtf_quantity', 'unpaid_cusa_qty', 'blocked_qty',
+                'ltcg_quantity', 'ltcg_value'
+            }
+
             new_holdings = []
             skipped_count = 0
 
@@ -31,7 +45,15 @@ class HoldingService:
                     skipped_count += 1
                     continue
 
-                holding = Holding(user_id=user_id, **data)
+                # Filter out commented fields from the data
+                filtered_data = {k: v for k, v in data.items() if k in allowed_fields}
+                
+                # Log filtered out fields for debugging
+                filtered_out = {k: v for k, v in data.items() if k in commented_fields}
+                if filtered_out:
+                    logger.debug(f"Filtered out commented fields for {isin}: {list(filtered_out.keys())}")
+
+                holding = Holding(user_id=user_id, **filtered_data)
                 new_holdings.append(holding)
                 existing_isin_set.add(isin)
 

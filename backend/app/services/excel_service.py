@@ -53,21 +53,23 @@ class ExcelService:
                 'marketcap': 'market_cap',
                 'sector': 'sector',
                 'total_quantity': 'total_quantity',
-                # 'free_quantity': 'free_quantity',
-                # 'unsettled_quantity': 'unsettled_quantity',
-                # 'margin_pledged_quantity': 'margin_pledged_quantity',
-                # 'paylatermtf_quantity': 'paylater_mtf_quantity',  # Fixed: this was missing in the original mapping
-                # 'unpaidcusa_qty': 'unpaid_cusa_qty',
-                # 'blocked_qty': 'blocked_qty',
                 'avg_trading_price': 'avg_trading_price',
                 'ltp': 'ltp',
                 'invested_value': 'invested_value',
                 'market_value': 'market_value',
                 'overall_gain_loss': 'overall_gain_loss',
-                # 'ltcg_quantity': 'ltcg_quantity',
-                # 'ltcg_value': 'ltcg_value',
                 'stcg_quantity': 'stcg_quantity',
                 'stcg_value': 'stcg_value',
+                
+                # Commented fields for future use - uncomment when model is updated
+                # 'free_quantity': 'free_quantity',
+                # 'unsettled_quantity': 'unsettled_quantity',
+                # 'margin_pledged_quantity': 'margin_pledged_quantity',
+                # 'paylatermtf_quantity': 'paylater_mtf_quantity',
+                # 'unpaidcusa_qty': 'unpaid_cusa_qty',
+                # 'blocked_qty': 'blocked_qty',
+                # 'ltcg_quantity': 'ltcg_quantity',
+                # 'ltcg_value': 'ltcg_value',
                 
                 # Handle variations that might occur after cleaning
                 'gain_loss': 'overall_gain_loss'
@@ -80,7 +82,7 @@ class ExcelService:
             
             logger.info(f"Final columns after mapping: {list(df.columns)}")
             
-            # Validate required columns
+            # Validate required columns (aligned with model)
             required_columns = [
                 'company_name', 'isin', 'sector', 'total_quantity',
                 'avg_trading_price', 'ltp', 'invested_value', 
@@ -98,6 +100,8 @@ class ExcelService:
             if 'client_id' in df.columns:
                 df = df[df['client_id'] != 'Total']
                 df = df[df['client_id'].notna()]  # Remove NaN client IDs
+                # Convert client_id to string to match model
+                df['client_id'] = df['client_id'].astype(str)
             
             # Remove rows without essential data
             df = df.dropna(subset=['company_name', 'isin'])
@@ -106,19 +110,33 @@ class ExcelService:
             # Handle ISIN codes (they appear to be truncated to 'INE' in this file)
             logger.info("Note: ISIN codes in this file appear to be truncated to 'INE' prefix")
             
-            # Convert numeric columns
+            # Convert numeric columns (aligned with model fields)
             numeric_columns = [
-                'total_quantity',  'avg_trading_price', 
+                'market_cap', 'total_quantity', 'avg_trading_price', 
                 'ltp', 'invested_value', 'market_value', 'overall_gain_loss',              
                 'stcg_quantity', 'stcg_value'
             ]
+            
+            # Commented fields for future use - uncomment when model is updated
+            # numeric_columns.extend([
+            #     'free_quantity', 'unsettled_quantity', 'margin_pledged_quantity',
+            #     'paylater_mtf_quantity', 'unpaid_cusa_qty', 'blocked_qty',
+            #     'ltcg_quantity', 'ltcg_value'
+            # ])
             
             for col in numeric_columns:
                 if col in df.columns:
                     # Handle string numbers with commas
                     if df[col].dtype == 'object':
                         df[col] = df[col].astype(str).str.replace(',', '')
-                    df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+                    
+                    # Convert to numeric, handling nullable fields appropriately
+                    if col in ['market_cap', 'stcg_quantity', 'stcg_value']:
+                        # These are nullable fields
+                        df[col] = pd.to_numeric(df[col], errors='coerce')
+                    else:
+                        # These are required fields
+                        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
             
             # Add some validation
             valid_rows = df[
@@ -133,6 +151,20 @@ class ExcelService:
             
             # Convert to list of dictionaries
             holdings_data = df.to_dict('records')
+            
+            # Clean up None values for optional fields to ensure proper handling
+            for holding in holdings_data:
+                # Convert NaN to None for optional fields
+                for field in ['market_cap', 'client_id', 'stcg_quantity', 'stcg_value']:
+                    if field in holding and pd.isna(holding[field]):
+                        holding[field] = None
+                        
+                # Commented fields for future use - uncomment when model is updated
+                # for field in ['free_quantity', 'unsettled_quantity', 'margin_pledged_quantity',
+                #               'paylater_mtf_quantity', 'unpaid_cusa_qty', 'blocked_qty',
+                #               'ltcg_quantity', 'ltcg_value']:
+                #     if field in holding and pd.isna(holding[field]):
+                #         holding[field] = None
             
             logger.info(f"Successfully processed {len(holdings_data)} holdings")
             
