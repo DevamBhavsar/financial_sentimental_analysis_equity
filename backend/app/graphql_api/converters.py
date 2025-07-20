@@ -15,6 +15,7 @@ def user_to_graphql(user: UserModel) -> User:
         last_name=str(user.last_name),  # type: ignore
         is_active=bool(user.is_active),  # type: ignore
         created_at=user.created_at,  # type: ignore
+        updated_at=user.updated_at,  # type: ignore
     )
 
 
@@ -23,17 +24,17 @@ def holding_to_graphql(holding: HoldingModel) -> Holding:
     return Holding(
         id=int(holding.id),  # type: ignore
         user_id=int(holding.user_id),  # type: ignore
-        ticker=str(holding.ticker),  # type: ignore
-        name=str(holding.name),  # type: ignore
-        quantity=float(holding.quantity),  # type: ignore
-        avg_price=float(holding.avg_price),  # type: ignore
-        current_price=(
-            float(holding.current_price) if holding.current_price is not None else None  # type: ignore
-        ),
-        sector=str(holding.sector) if holding.sector is not None else None,  # type: ignore
-        holding_type=str(holding.holding_type),  # type: ignore
-        created_at=holding.created_at,  # type: ignore
-        updated_at=holding.updated_at,  # type: ignore
+        company_name=str(holding.company_name),  # type: ignore
+        isin=str(holding.isin),  # type: ignore
+        market_cap=float(holding.market_cap),  # type: ignore
+        sector=str(holding.sector),  # type: ignore
+        total_quantity=int(holding.total_quantity),  # type: ignore
+        free_quantity=int(holding.free_quantity),  # type: ignore
+        avg_trading_price=float(holding.avg_trading_price),  # type: ignore
+        ltp=float(holding.ltp),  # type: ignore
+        invested_value=float(holding.invested_value),  # type: ignore
+        market_value=float(holding.market_value),  # type: ignore
+        overall_gain_loss=float(holding.overall_gain_loss),  # type: ignore
     )
 
 

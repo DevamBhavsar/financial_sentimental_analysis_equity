@@ -1,23 +1,28 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
-from sqlalchemy.sql import func
+# models/holding.py
+from sqlalchemy import Column, Integer, String, Float, ForeignKey
 from sqlalchemy.orm import relationship
 from ..database import Base
-
 
 class Holding(Base):
     __tablename__ = "holdings"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    ticker = Column(String, nullable=False, index=True)
-    name = Column(String, nullable=False)
-    quantity = Column(Float, nullable=False)
-    avg_price = Column(Float, nullable=False)
-    current_price = Column(Float)
+    user_id = Column(Integer, ForeignKey("users.id")) 
+    client_id = Column(Integer, nullable=True)
+    company_name = Column(String, index=True)
+    isin = Column(String, unique=True, index=True)
+    market_cap = Column(Float)
     sector = Column(String)
-    holding_type = Column(String)  # 'equity' or 'mutual_fund'
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    total_quantity = Column(Integer)
+    # free_quantity = Column(Integer)
+    avg_trading_price = Column(Float)
+    ltp = Column(Float)
+    invested_value = Column(Float)
+    market_value = Column(Float)
+    overall_gain_loss = Column(Float)
 
-    # Relationships
+    # Corrected relationship to match UserModel
     user = relationship("User", back_populates="holdings")
+
+    def __repr__(self):
+        return f"<Holding(company_name='{self.company_name}', total_quantity={self.total_quantity}, ltp={self.ltp})>"

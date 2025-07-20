@@ -39,7 +39,6 @@ python-dotenv
 httpx
 pydantic
 pydantic-settings
-"pydantic[email]"
 
 # --- Testing ---
 pytest
