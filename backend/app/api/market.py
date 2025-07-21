@@ -83,24 +83,25 @@ async def search_instruments(request: InstrumentSearch):
     """Search for instruments by name or symbol"""
     try:
         instruments = await market_service.search_instruments(
-            query=request.query,
-            exchange=request.exchange
+            query=request.query, exchange=request.exchange
         )
-        
+
         # Format response for frontend dropdown
         formatted_instruments = []
         for instrument in instruments:
-            formatted_instruments.append({
-                "symbol": instrument.get("tradingsymbol", ""),
-                "name": instrument.get("name", instrument.get("tradingsymbol", "")),
-                "token": instrument.get("symboltoken", ""),
-                "exchange": instrument.get("exchange", request.exchange),
-                "instrument_type": instrument.get("instrumenttype", ""),
-                "lot_size": instrument.get("lotsize", 1)
-            })
-        
+            formatted_instruments.append(
+                {
+                    "symbol": instrument.get("tradingsymbol", ""),
+                    "name": instrument.get("name", instrument.get("tradingsymbol", "")),
+                    "token": instrument.get("symboltoken", ""),
+                    "exchange": instrument.get("exchange", request.exchange),
+                    "instrument_type": instrument.get("instrumenttype", ""),
+                    "lot_size": instrument.get("lotsize", 1),
+                }
+            )
+
         return {"success": True, "data": formatted_instruments}
-        
+
     except Exception as e:
         logger.error(f"Error searching instruments: {e}")
         raise HTTPException(status_code=500, detail="Failed to search instruments")
@@ -113,14 +114,19 @@ async def get_historical_price(request: HistoricalPriceRequest):
         price = await market_service.get_historical_price(
             symbol_token=request.symbol_token,
             exchange=request.exchange,
-            date=request.date
+            date=request.date,
         )
-        
+
         if price is None:
-            raise HTTPException(status_code=404, detail="Historical price not found for the given date")
-        
-        return {"success": True, "data": {"price": price, "date": request.date.isoformat()}}
-        
+            raise HTTPException(
+                status_code=404, detail="Historical price not found for the given date"
+            )
+
+        return {
+            "success": True,
+            "data": {"price": price, "date": request.date.isoformat()},
+        }
+
     except HTTPException:
         raise
     except Exception as e:
@@ -133,17 +139,33 @@ async def get_current_ltp(symbol_token: str, exchange: str = "NSE"):
     """Get current Last Traded Price"""
     try:
         ltp = await market_service.get_ltp(symbol_token=symbol_token, exchange=exchange)
-        
+
         if ltp is None:
             raise HTTPException(status_code=404, detail="LTP not found")
-        
+
         return {"success": True, "data": {"ltp": ltp, "symbol_token": symbol_token}}
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error getting LTP: {e}")
         raise HTTPException(status_code=500, detail="Failed to get LTP")
+
+
+@router.post("/websocket/connect")
+async def connect_websocket():
+    """Explicitly initialize the WebSocket connection."""
+    try:
+        if not websocket_manager.is_connected:
+            success = await websocket_manager.initialize()
+            if not success:
+                raise HTTPException(
+                    status_code=500, detail="Failed to initialize WebSocket connection"
+                )
+        return {"success": True, "message": "WebSocket connection is active."}
+    except Exception as e:
+        logger.error(f"Error connecting WebSocket: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/websocket/subscribe")
@@ -154,82 +176,98 @@ async def subscribe_to_market_data(request: WebSocketSubscription):
         if not websocket_manager.is_connected:
             success = await websocket_manager.initialize()
             if not success:
-                raise HTTPException(status_code=500, detail="Failed to initialize WebSocket connection")
-        
+                raise HTTPException(
+                    status_code=500, detail="Failed to initialize WebSocket connection"
+                )
+
         # Subscribe to instruments
         success = await websocket_manager.subscribe_to_instruments(
-            instruments=request.instruments,
-            mode=request.mode
+            instruments=request.instruments, mode=request.mode
         )
-        
+
         if not success:
-            raise HTTPException(status_code=500, detail="Failed to subscribe to instruments")
-        
-        return {"success": True, "message": f"Subscribed to {len(request.instruments)} instruments"}
-        
+            raise HTTPException(
+                status_code=500, detail="Failed to subscribe to instruments"
+            )
+
+        return {
+            "success": True,
+            "message": f"Subscribed to {len(request.instruments)} instruments",
+        }
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error subscribing to market data: {e}")
-        raise HTTPException(status_code=500, detail="Failed to subscribe to market data")
+        raise HTTPException(
+            status_code=500, detail="Failed to subscribe to market data"
+        )
 
 
 @router.post("/websocket/unsubscribe")
 async def unsubscribe_from_market_data(request: WebSocketSubscription):
     """Unsubscribe from real-time market data"""
     try:
-        success = await websocket_manager.unsubscribe_from_instruments(request.instruments)
-        
+        success = await websocket_manager.unsubscribe_from_instruments(
+            request.instruments
+        )
+
         if not success:
-            raise HTTPException(status_code=500, detail="Failed to unsubscribe from instruments")
-        
-        return {"success": True, "message": f"Unsubscribed from {len(request.instruments)} instruments"}
-        
+            raise HTTPException(
+                status_code=500, detail="Failed to unsubscribe from instruments"
+            )
+
+        return {
+            "success": True,
+            "message": f"Unsubscribed from {len(request.instruments)} instruments",
+        }
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error unsubscribing from market data: {e}")
-        raise HTTPException(status_code=500, detail="Failed to unsubscribe from market data")
+        raise HTTPException(
+            status_code=500, detail="Failed to unsubscribe from market data"
+        )
 
 
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for real-time market data"""
     await connection_manager.connect(websocket)
-    
+
     try:
         # Add callback to forward Angel One data to connected clients
         def market_data_callback(data: Dict[str, Any]):
             # Schedule broadcasting (since we're in a different thread)
             import asyncio
+
             try:
                 loop = asyncio.get_event_loop()
-                asyncio.create_task(connection_manager.broadcast({
-                    "type": "market_data",
-                    "data": data
-                }))
+                asyncio.create_task(
+                    connection_manager.broadcast({"type": "market_data", "data": data})
+                )
             except RuntimeError:
                 # If no event loop in current thread, skip broadcasting
                 pass
-        
+
         websocket_manager.add_data_callback(market_data_callback)
-        
+
         # Keep connection alive and handle client messages
         while True:
             try:
                 # Wait for client messages (for heartbeat or additional commands)
                 data = await websocket.receive_text()
                 message = json.loads(data)
-                
+
                 if message.get("type") == "ping":
                     await websocket.send_text(json.dumps({"type": "pong"}))
-                    
+
             except json.JSONDecodeError:
-                await websocket.send_text(json.dumps({
-                    "type": "error",
-                    "message": "Invalid JSON format"
-                }))
-                
+                await websocket.send_text(
+                    json.dumps({"type": "error", "message": "Invalid JSON format"})
+                )
+
     except WebSocketDisconnect:
         logger.info("Client disconnected from WebSocket")
     except Exception as e:
@@ -251,8 +289,8 @@ async def get_websocket_status():
         "data": {
             "is_connected": websocket_manager.is_connected,
             "subscribed_instruments": len(websocket_manager.subscribed_tokens),
-            "active_connections": len(connection_manager.active_connections)
-        }
+            "active_connections": len(connection_manager.active_connections),
+        },
     }
 
 
@@ -262,7 +300,10 @@ async def authenticate_market_service():
     try:
         success = await market_service.authenticate()
         if success:
-            return {"success": True, "message": "Successfully authenticated with Angel One API"}
+            return {
+                "success": True,
+                "message": "Successfully authenticated with Angel One API",
+            }
         else:
             raise HTTPException(status_code=401, detail="Authentication failed")
     except Exception as e:
@@ -272,21 +313,19 @@ async def authenticate_market_service():
 
 @router.post("/refresh-portfolio")
 async def refresh_portfolio_data(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """Refresh all portfolio holdings with latest market data from Angel One"""
     try:
         result = await portfolio_refresh_service.refresh_all_holdings(
-            user_id=current_user.id,
-            db=db
+            user_id=current_user.id, db=db
         )
-        
+
         if result["success"]:
             return {"success": True, "data": result}
         else:
             raise HTTPException(status_code=500, detail=result["message"])
-            
+
     except HTTPException:
         raise
     except Exception as e:

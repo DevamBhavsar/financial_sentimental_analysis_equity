@@ -95,3 +95,4 @@ datasets/
 frontend/.env.local
 frontend/.env.local
 frontend/.env.local
+logs

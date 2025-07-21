@@ -145,35 +145,10 @@ class MarketService:
             if not self.smart_api:
                 return []
 
-            # Try different method signatures for searchScrip
-            try:
-                # Method 1: Try with exchange and searchtext (older versions)
-                instruments = self.smart_api.searchScrip(
-                    exchange=exchange, searchtext=query
-                )
-            except TypeError as e:
-                logger.info(f"Method 1 failed, trying alternative: {e}")
-                try:
-                    # Method 2: Try with just the query (newer versions)
-                    instruments = self.smart_api.searchScrip(query)
-                except Exception as e2:
-                    logger.info(f"Method 2 failed, trying method 3: {e2}")
-                    try:
-                        # Method 3: Try with different parameter name
-                        instruments = self.smart_api.searchScrip(
-                            exchange=exchange, search_text=query
-                        )
-                    except Exception as e3:
-                        logger.info(f"Method 3 failed, trying method 4: {e3}")
-                        try:
-                            # Method 4: Try with symbol parameter
-                            instruments = self.smart_api.searchScrip(
-                                exchange=exchange, symbol=query
-                            )
-                        except Exception as e4:
-                            logger.error(f"All search methods failed: {e4}")
-                            # Fallback: Use getAllHoldings or similar method if available
-                            return await self._fallback_search(query, exchange)
+            # THE FIX IS HERE: Using the correct parameter name 'searchscrip'
+            instruments = self.smart_api.searchScrip(
+                exchange=exchange, searchscrip=query
+            )
 
             if instruments and instruments.get("status"):
                 return instruments["data"][:10]  # Return top 10 matches
@@ -239,6 +214,31 @@ class MarketService:
             logger.error(f"Error getting historical price: {e}")
             return None
 
+    async def get_market_data(
+        self, mode: str, exchange_tokens: Dict[str, List[str]]
+    ) -> Optional[Dict[str, Any]]:
+        """Get market data for a list of instruments."""
+        try:
+            if not self._authenticated:
+                await self.authenticate()
+
+            if not self.smart_api:
+                return None
+
+            # The method is getMarketData, not marketData
+            response = self.smart_api.getMarketData(mode, exchange_tokens)
+
+            if response and response.get("status"):
+                return response["data"]
+            else:
+                logger.error(
+                    f"Market data fetch failed: {response.get('message', 'Unknown error') if response else 'No response'}"
+                )
+                return None
+        except Exception as e:
+            logger.error(f"Error getting market data: {e}")
+            return None
+
     async def get_ltp(self, symbol_token: str, exchange: str) -> Optional[float]:
         """Get Last Traded Price for a symbol"""
         try:
@@ -248,13 +248,14 @@ class MarketService:
             if not self.smart_api:
                 return None
 
-            ltp_data = self.smart_api.ltpData(exchange, symbol_token, symbol_token)
+            exchange_tokens = {exchange: [symbol_token]}
+            market_data = await self.get_market_data("FULL", exchange_tokens)
 
-            if ltp_data["status"] and ltp_data["data"]:
-                return float(ltp_data["data"]["ltp"])
-            else:
-                logger.error(f"LTP fetch failed: {ltp_data['message']}")
-                return None
+            if market_data and market_data.get("fetched"):
+                for item in market_data["fetched"]:
+                    if item.get("symbolToken") == symbol_token:
+                        return float(item["ltp"])
+            return None
 
         except Exception as e:
             logger.error(f"Error getting LTP: {e}")

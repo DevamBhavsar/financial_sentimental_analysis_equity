@@ -1,18 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { AuthManager } from "@/lib/auth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { 
-  Clock, 
-  Wifi, 
-  WifiOff, 
-  TrendingUp, 
-  AlertCircle, 
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  AlertCircle,
   CheckCircle,
-  RefreshCw 
+  Clock,
+  RefreshCw,
+  TrendingUp,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
+import React, { useEffect, useState } from "react";
 
 interface MarketStatusData {
   is_open: boolean;
@@ -30,25 +29,28 @@ interface WebSocketStatusData {
 }
 
 const MarketStatus: React.FC = () => {
-  const [marketStatus, setMarketStatus] = useState<MarketStatusData | null>(null);
+  const [marketStatus, setMarketStatus] = useState<MarketStatusData | null>(
+    null
+  );
   const [wsStatus, setWsStatus] = useState<WebSocketStatusData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
 
   const fetchMarketStatus = async () => {
     try {
       setIsRefreshing(true);
-      const response = await fetch('/api/market/status');
+      const response = await fetch("/api/market/status");
       const data = await response.json();
-      
+
       if (data.success) {
         setMarketStatus(data.data);
       } else {
-        throw new Error('Failed to fetch market status');
+        throw new Error("Failed to fetch market status");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setIsRefreshing(false);
     }
@@ -56,39 +58,43 @@ const MarketStatus: React.FC = () => {
 
   const fetchWebSocketStatus = async () => {
     try {
-      const response = await fetch('/api/market/websocket/status');
+      const response = await fetch("/api/market/websocket/status");
       const data = await response.json();
-      
+
       if (data.success) {
         setWsStatus(data.data);
       }
     } catch (err) {
-      console.error('Failed to fetch WebSocket status:', err);
+      console.error("Failed to fetch WebSocket status:", err);
     }
   };
 
-  const authenticateMarketService = async () => {
+  const handleConnectWebSocket = async () => {
+    setIsConnecting(true);
     try {
-      const response = await fetch('/api/market/authenticate', {
-        method: 'POST',
+      const response = await fetch("/api/market/websocket/connect", {
+        method: "POST",
       });
       const data = await response.json();
-      
+
       if (data.success) {
+        // After connecting, refresh the status to show "Connected"
         await fetchWebSocketStatus();
+      } else {
+        alert(`Connection failed: ${data.detail}`);
       }
     } catch (err) {
-      console.error('Failed to authenticate:', err);
+      console.error("Failed to connect WebSocket:", err);
+      alert("An error occurred while trying to connect.");
+    } finally {
+      setIsConnecting(false);
     }
   };
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      await Promise.all([
-        fetchMarketStatus(),
-        fetchWebSocketStatus()
-      ]);
+      await Promise.all([fetchMarketStatus(), fetchWebSocketStatus()]);
       setLoading(false);
     };
 
@@ -105,19 +111,20 @@ const MarketStatus: React.FC = () => {
 
   const formatTime = (timeString: string) => {
     try {
-      // Handle the specific format from backend: "2025-07-21 19:35:36 IST"
-      const cleanTimeString = timeString.replace(' IST', '').replace(' LMT', '');
+      const cleanTimeString = timeString
+        .replace(" IST", "")
+        .replace(" LMT", "");
       const date = new Date(cleanTimeString);
-      
+
       if (isNaN(date.getTime())) {
         return timeString;
       }
-      
-      return date.toLocaleTimeString('en-IN', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        timeZone: 'Asia/Kolkata'
+
+      return date.toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        timeZone: "Asia/Kolkata",
       });
     } catch {
       return timeString;
@@ -126,14 +133,16 @@ const MarketStatus: React.FC = () => {
 
   const formatDate = (timeString: string) => {
     try {
-      const cleanTimeString = timeString.replace(' IST', '').replace(' LMT', '');
+      const cleanTimeString = timeString
+        .replace(" IST", "")
+        .replace(" LMT", "");
       const date = new Date(cleanTimeString);
-      
+
       if (isNaN(date.getTime())) {
         return timeString;
       }
-      
-      return date.toLocaleDateString('en-IN');
+
+      return date.toLocaleDateString("en-IN");
     } catch {
       return timeString;
     }
@@ -158,10 +167,10 @@ const MarketStatus: React.FC = () => {
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
           Failed to load market status: {error}
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="ml-2" 
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-2"
             onClick={fetchMarketStatus}
           >
             Retry
@@ -175,11 +184,13 @@ const MarketStatus: React.FC = () => {
     <div className="space-y-4 mb-6">
       {/* Market Status Notification */}
       {marketStatus && (
-        <Alert className={`border-2 ${
-          marketStatus.is_open 
-            ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950' 
-            : 'border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950'
-        }`}>
+        <Alert
+          className={`border-2 ${
+            marketStatus.is_open
+              ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950"
+              : "border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950"
+          }`}
+        >
           <div className="flex items-center space-x-3">
             {marketStatus.is_open ? (
               <CheckCircle className="h-5 w-5 text-green-600" />
@@ -188,22 +199,23 @@ const MarketStatus: React.FC = () => {
             )}
             <div className="flex-1">
               <div className="font-medium">
-                {marketStatus.is_open ? 'Market is Open' : 'Market is Closed'}
+                {marketStatus.is_open ? "Market is Open" : "Market is Closed"}
               </div>
               <div className="text-sm text-muted-foreground">
                 Current time: {formatTime(marketStatus.current_time_ist)} IST
                 {!marketStatus.is_open && (
                   <span className="ml-2">
-                    • Next session: {formatDate(marketStatus.next_session)} at {marketStatus.market_open_time}
+                    • Next session: {formatDate(marketStatus.next_session)} at{" "}
+                    {marketStatus.market_open_time}
                   </span>
                 )}
               </div>
             </div>
-            <Badge 
+            <Badge
               variant={marketStatus.is_open ? "default" : "secondary"}
               className={marketStatus.is_open ? "bg-green-600" : ""}
             >
-              {marketStatus.is_open ? 'LIVE' : 'CLOSED'}
+              {marketStatus.is_open ? "LIVE" : "CLOSED"}
             </Badge>
           </div>
         </Alert>
@@ -217,25 +229,31 @@ const MarketStatus: React.FC = () => {
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Clock className="h-4 w-4" />
               Market Hours
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
                 onClick={fetchMarketStatus}
                 disabled={isRefreshing}
                 className="ml-auto h-6 w-6 p-0"
               >
-                <RefreshCw className={`h-3 w-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  className={`h-3 w-3 ${isRefreshing ? "animate-spin" : ""}`}
+                />
               </Button>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Open:</span>
-              <span className="font-mono">{marketStatus?.market_open_time} IST</span>
+              <span className="font-mono">
+                {marketStatus?.market_open_time} IST
+              </span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Close:</span>
-              <span className="font-mono">{marketStatus?.market_close_time} IST</span>
+              <span className="font-mono">
+                {marketStatus?.market_close_time} IST
+              </span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Trading Days:</span>
@@ -255,13 +273,14 @@ const MarketStatus: React.FC = () => {
               )}
               Real-time Data
               {!wsStatus?.is_connected && (
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
-                  onClick={authenticateMarketService}
+                  onClick={handleConnectWebSocket}
+                  disabled={isConnecting}
                   className="ml-auto text-xs"
                 >
-                  Connect
+                  {isConnecting ? "Connecting..." : "Connect"}
                 </Button>
               )}
             </CardTitle>
@@ -269,20 +288,24 @@ const MarketStatus: React.FC = () => {
           <CardContent className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Status:</span>
-              <Badge 
+              <Badge
                 variant={wsStatus?.is_connected ? "default" : "destructive"}
                 className="text-xs"
               >
-                {wsStatus?.is_connected ? 'Connected' : 'Disconnected'}
+                {wsStatus?.is_connected ? "Connected" : "Disconnected"}
               </Badge>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Subscriptions:</span>
-              <span className="font-mono">{wsStatus?.subscribed_instruments || 0}</span>
+              <span className="font-mono">
+                {wsStatus?.subscribed_instruments || 0}
+              </span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Active Clients:</span>
-              <span className="font-mono">{wsStatus?.active_connections || 0}</span>
+              <span className="font-mono">
+                {wsStatus?.active_connections || 0}
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -293,8 +316,8 @@ const MarketStatus: React.FC = () => {
         <Alert className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
           <TrendingUp className="h-4 w-4 text-blue-600" />
           <AlertDescription className="text-blue-800 dark:text-blue-200">
-            <strong>Live Trading Session:</strong> Real-time market data is active. 
-            Portfolio values will update automatically.
+            <strong>Live Trading Session:</strong> Real-time market data is
+            active. Portfolio values will update automatically.
           </AlertDescription>
         </Alert>
       )}

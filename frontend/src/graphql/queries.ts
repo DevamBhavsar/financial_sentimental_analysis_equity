@@ -33,6 +33,15 @@ export const GET_DASHBOARD_DATA = gql`
         market_cap
         stcg_quantity
         stcg_value
+        open
+        high
+        low
+        close
+        trade_volume
+        year_high
+        year_low
+        total_buy_quantity
+        total_sell_quantity
       }
     }
   }
