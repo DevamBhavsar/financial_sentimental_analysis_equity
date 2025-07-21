@@ -1,9 +1,9 @@
-import '@/styles/globals.css'
-import type { AppProps } from 'next/app'
-import { ApolloProvider } from '@apollo/client'
-import { client } from '@/lib/apollo'
-import { AuthProvider } from '@/contexts/AuthContext'
-import { ThemeProvider } from '@/components/theme-provider'
+import { ThemeProvider } from "@/components/theme-provider";
+import { AuthProvider } from "@/context/AuthContext";
+import { client } from "@/lib/apollo";
+import "@/styles/globals.css";
+import { ApolloProvider } from "@apollo/client";
+import type { AppProps } from "next/app";
 
 export default function App({ Component, pageProps }: AppProps) {
   return (
@@ -19,5 +19,5 @@ export default function App({ Component, pageProps }: AppProps) {
         </ThemeProvider>
       </AuthProvider>
     </ApolloProvider>
-  )
+  );
 }

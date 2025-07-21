@@ -1,5 +1,8 @@
 // pages/dashboard.tsx
 import { Layout } from "@/components/layouts/Layout";
+import MarketStatus from "@/components/MarketStatus";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import StockSearchDialog from "@/components/StockSearchDialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,6 +12,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -16,38 +27,29 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useAuth } from "@/context/AuthContext";
+import { ADD_HOLDING, GET_DASHBOARD_DATA, REMOVE_HOLDING } from "@/graphql/queries";
+import { AuthManager } from "@/lib/auth";
+import { useMutation, useQuery } from "@apollo/client";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { GET_DASHBOARD_DATA, ADD_HOLDING, REMOVE_HOLDING } from "@/graphql/queries";
-import { useQuery, useMutation } from "@apollo/client";
-import {
+  Activity,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  BarChart3,
+  Building2,
+  Percent,
+  PieChart,
+  Plus,
+  RefreshCw,
+  Trash2,
   TrendingDown,
   TrendingUp,
   UploadCloud,
-  Plus,
-  Trash2,
-  PieChart,
-  BarChart3,
-  Percent,
-  Building2,
   Wallet,
-  Activity,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
 } from "lucide-react";
 import { useRouter } from "next/router";
-import { useState } from "react";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { useEffect, useState } from "react";
 
 interface AddHoldingForm {
   company_name: string;
@@ -69,8 +71,92 @@ export default function DashboardPage() {
     awaitRefetchQueries: true,
   });
 
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { isAuthenticated } = useAuth();
+
   const router = useRouter();
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+
+  // Auto-refresh portfolio data when dashboard loads (if market is closed)
+  useEffect(() => {
+    const refreshPortfolioData = async () => {
+      try {
+        const marketResponse = await fetch('/api/market/status');
+        const marketData = await marketResponse.json();
+        
+        // Only auto-refresh if market is closed to avoid overwhelming during trading hours
+        if (marketData.success && !marketData.data.is_open) {
+          await handleRefreshPortfolio(false); // Silent refresh
+        }
+      } catch (error) {
+        console.error('Error checking market status for auto-refresh:', error);
+      }
+    };
+
+    if (data?.dashboard?.holdings?.length > 0) {
+      refreshPortfolioData();
+    }
+  }, [data?.dashboard?.holdings?.length]);
+
+  const handleRefreshPortfolio = async (showLoading = true) => {
+    try {
+      if (showLoading) setIsRefreshing(true);
+      
+      if (!isAuthenticated) {
+        console.error('User not authenticated');
+        if (showLoading) {
+          alert('Please log in to refresh portfolio data');
+        }
+        return;
+      }
+      
+      const token = AuthManager.getToken();
+      if (!token) {
+        console.error('No authentication token found');
+        return;
+      }
+      
+      console.log('Sending refresh request with token:', token ? 'Token present' : 'No token');
+      console.log('User authenticated:', isAuthenticated);
+      
+      const response = await fetch('/api/market/refresh-portfolio', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Portfolio refresh failed with status:', response.status, errorText);
+        if (showLoading) {
+          alert(`Portfolio refresh failed: ${response.status} ${errorText}`);
+        }
+        return;
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setLastUpdated(new Date().toISOString());
+        await refetch(); // Refresh GraphQL data
+        
+        if (showLoading) {
+          // Show success message (you can add a toast notification here)
+          console.log(`Portfolio refreshed: ${result.data.updated_count} holdings updated`);
+        }
+      } else {
+        console.error('Portfolio refresh failed:', result.message);
+      }
+    } catch (error) {
+      console.error('Error refreshing portfolio:', error);
+    } finally {
+      if (showLoading) setIsRefreshing(false);
+    }
+  };
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
@@ -81,14 +167,6 @@ export default function DashboardPage() {
     isOpen: false,
     holdingId: null,
     holdingName: '',
-  });
-  const [newHolding, setNewHolding] = useState<AddHoldingForm>({
-    company_name: "",
-    isin: "",
-    sector: "",
-    total_quantity: 0,
-    avg_trading_price: 0,
-    ltp: 0,
   });
 
   const handleSort = (field: string) => {
@@ -160,36 +238,7 @@ export default function DashboardPage() {
     return 0;
   }) : [];
 
-  const handleAddHolding = async () => {
-    try {
-      const invested_value = newHolding.total_quantity * newHolding.avg_trading_price;
-      const market_value = newHolding.total_quantity * newHolding.ltp;
-      const overall_gain_loss = market_value - invested_value;
 
-      await addHolding({
-        variables: {
-          input: {
-            ...newHolding,
-            invested_value,
-            market_value,
-            overall_gain_loss,
-          },
-        },
-      });
-      
-      setNewHolding({
-        company_name: "",
-        isin: "",
-        sector: "",
-        total_quantity: 0,
-        avg_trading_price: 0,
-        ltp: 0,
-      });
-      setIsAddDialogOpen(false);
-    } catch (error) {
-      console.error("Error adding holding:", error);
-    }
-  };
 
   const handleRemoveHolding = (id: number, companyName: string) => {
     setDeleteConfirmation({
@@ -247,6 +296,9 @@ export default function DashboardPage() {
     <ProtectedRoute>
       <Layout>
         <div className="space-y-6 p-6">
+        {/* Market Status */}
+        <MarketStatus />
+        
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
@@ -260,98 +312,21 @@ export default function DashboardPage() {
           <div className="flex gap-3">
             {holdingsExist && (
               <>
-                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="bg-green-600 hover:bg-green-700">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Stock
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                      <DialogTitle>Add New Stock</DialogTitle>
-                      <DialogDescription>
-                        Enter the details of the stock you want to add to your portfolio.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="company_name" className="text-right">
-                          Company
-                        </Label>
-                        <Input
-                          id="company_name"
-                          value={newHolding.company_name}
-                          onChange={(e) => setNewHolding({...newHolding, company_name: e.target.value})}
-                          className="col-span-3"
-                        />
-                      </div>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="isin" className="text-right">
-                          ISIN
-                        </Label>
-                        <Input
-                          id="isin"
-                          value={newHolding.isin}
-                          onChange={(e) => setNewHolding({...newHolding, isin: e.target.value})}
-                          className="col-span-3"
-                        />
-                      </div>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="sector" className="text-right">
-                          Sector
-                        </Label>
-                        <Input
-                          id="sector"
-                          value={newHolding.sector}
-                          onChange={(e) => setNewHolding({...newHolding, sector: e.target.value})}
-                          className="col-span-3"
-                        />
-                      </div>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="total_quantity" className="text-right">
-                          Quantity
-                        </Label>
-                        <Input
-                          id="total_quantity"
-                          type="number"
-                          value={newHolding.total_quantity}
-                          onChange={(e) => setNewHolding({...newHolding, total_quantity: parseInt(e.target.value) || 0})}
-                          className="col-span-3"
-                        />
-                      </div>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="avg_trading_price" className="text-right">
-                          Avg Price
-                        </Label>
-                        <Input
-                          id="avg_trading_price"
-                          type="number"
-                          step="0.01"
-                          value={newHolding.avg_trading_price}
-                          onChange={(e) => setNewHolding({...newHolding, avg_trading_price: parseFloat(e.target.value) || 0})}
-                          className="col-span-3"
-                        />
-                      </div>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="ltp" className="text-right">
-                          Current Price
-                        </Label>
-                        <Input
-                          id="ltp"
-                          type="number"
-                          step="0.01"
-                          value={newHolding.ltp}
-                          onChange={(e) => setNewHolding({...newHolding, ltp: parseFloat(e.target.value) || 0})}
-                          className="col-span-3"
-                        />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button onClick={handleAddHolding}>Add Stock</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                <Button 
+                  onClick={() => handleRefreshPortfolio(true)}
+                  disabled={isRefreshing}
+                  variant="outline"
+                  className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  {isRefreshing ? 'Updating...' : 'Refresh Prices'}
+                </Button>
+                <StockSearchDialog>
+                  <Button className="bg-green-600 hover:bg-green-700">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Stock
+                  </Button>
+                </StockSearchDialog>
                 <Button onClick={() => router.push("/upload")} variant="outline">
                   <UploadCloud className="mr-2 h-4 w-4" />
                   Upload Holdings
@@ -363,6 +338,23 @@ export default function DashboardPage() {
 
         {holdingsExist ? (
           <>
+            {/* Last Updated Info */}
+            {lastUpdated && (
+              <div className="text-center text-sm text-muted-foreground bg-muted/50 rounded-lg p-3">
+                <span className="inline-flex items-center gap-2">
+                  <Activity className="h-4 w-4" />
+                  Portfolio data last updated: {new Date(lastUpdated).toLocaleString('en-IN', {
+                    year: 'numeric',
+                    month: 'short', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: 'Asia/Kolkata'
+                  })} IST
+                </span>
+              </div>
+            )}
+
             {/* Portfolio Summary - Large Cards */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
               <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
@@ -633,98 +625,12 @@ export default function DashboardPage() {
                 <UploadCloud className="mr-2 h-4 w-4" />
                 Upload Holdings File
               </Button>
-              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Stock Manually
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
-                  <DialogHeader>
-                    <DialogTitle>Add New Stock</DialogTitle>
-                    <DialogDescription>
-                      Enter the details of the stock you want to add to your portfolio.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="company_name" className="text-right">
-                        Company
-                      </Label>
-                      <Input
-                        id="company_name"
-                        value={newHolding.company_name}
-                        onChange={(e) => setNewHolding({...newHolding, company_name: e.target.value})}
-                        className="col-span-3"
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="isin" className="text-right">
-                        ISIN
-                      </Label>
-                      <Input
-                        id="isin"
-                        value={newHolding.isin}
-                        onChange={(e) => setNewHolding({...newHolding, isin: e.target.value})}
-                        className="col-span-3"
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="sector" className="text-right">
-                        Sector
-                      </Label>
-                      <Input
-                        id="sector"
-                        value={newHolding.sector}
-                        onChange={(e) => setNewHolding({...newHolding, sector: e.target.value})}
-                        className="col-span-3"
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="total_quantity" className="text-right">
-                        Quantity
-                      </Label>
-                      <Input
-                        id="total_quantity"
-                        type="number"
-                        value={newHolding.total_quantity}
-                        onChange={(e) => setNewHolding({...newHolding, total_quantity: parseInt(e.target.value) || 0})}
-                        className="col-span-3"
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="avg_trading_price" className="text-right">
-                        Avg Price
-                      </Label>
-                      <Input
-                        id="avg_trading_price"
-                        type="number"
-                        step="0.01"
-                        value={newHolding.avg_trading_price}
-                        onChange={(e) => setNewHolding({...newHolding, avg_trading_price: parseFloat(e.target.value) || 0})}
-                        className="col-span-3"
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="ltp" className="text-right">
-                        Current Price
-                      </Label>
-                      <Input
-                        id="ltp"
-                        type="number"
-                        step="0.01"
-                        value={newHolding.ltp}
-                        onChange={(e) => setNewHolding({...newHolding, ltp: parseFloat(e.target.value) || 0})}
-                        className="col-span-3"
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button onClick={handleAddHolding}>Add Stock</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              <StockSearchDialog>
+                <Button variant="outline">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Stock Manually
+                </Button>
+              </StockSearchDialog>
             </div>
           </div>
         )}

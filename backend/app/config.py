@@ -21,6 +21,12 @@ class Settings(BaseSettings):
     news_api_key: Optional[str] = None
     alpha_vantage_api_key: Optional[str] = None
 
+    # Angel One SmartAPI
+    angel_one_api_key: Optional[str] = None
+    angel_one_secret_key: Optional[str] = None
+    angel_one_client_code: Optional[str] = None
+    angel_one_totp_secret: Optional[str] = None
+    angel_one_mpin: Optional[int] = None
     # File upload
     max_file_size: int = 10 * 1024 * 1024  # 10MB
     upload_dir: str = "uploads"

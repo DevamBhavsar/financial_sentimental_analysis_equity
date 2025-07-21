@@ -43,3 +43,9 @@ pydantic-settings
 # --- Testing ---
 pytest
 pytest-asyncio
+
+# --- Angel One SmartAPI ---
+smartapi-python
+websocket-client
+logzero
+pyotp

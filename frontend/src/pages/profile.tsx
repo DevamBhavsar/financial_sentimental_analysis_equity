@@ -1,4 +1,5 @@
 import { Layout } from "@/components/layouts/Layout";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,14 +10,18 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/context/AuthContext";
+import {
+  CHANGE_PASSWORD,
+  GET_CURRENT_USER,
+  GET_DASHBOARD_DATA,
+  UPDATE_PROFILE,
+} from "@/graphql/queries";
 import { useMutation, useQuery } from "@apollo/client";
-import { User, Lock, Save, AlertCircle, CheckCircle } from "lucide-react";
+import { AlertCircle, CheckCircle, Lock, Save, User } from "lucide-react";
+import Head from "next/head";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
-import { UPDATE_PROFILE, CHANGE_PASSWORD, GET_DASHBOARD_DATA, GET_CURRENT_USER } from "@/graphql/queries";
-import Head from "next/head";
 
 interface ProfileForm {
   first_name: string;
@@ -35,24 +40,24 @@ export default function ProfilePage() {
   const router = useRouter();
   const { data: dashboardData } = useQuery(GET_DASHBOARD_DATA);
   const { data: userData, loading: userLoading } = useQuery(GET_CURRENT_USER);
-  
+
   const [updateProfile] = useMutation(UPDATE_PROFILE, {
     refetchQueries: [{ query: GET_CURRENT_USER }],
   });
   const [changePassword] = useMutation(CHANGE_PASSWORD);
-  
+
   const [profileForm, setProfileForm] = useState<ProfileForm>({
     first_name: "",
     last_name: "",
     email: "",
   });
-  
+
   const [passwordForm, setPasswordForm] = useState<PasswordForm>({
     current_password: "",
     new_password: "",
     confirm_password: "",
   });
-  
+
   const [profileError, setProfileError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
@@ -82,7 +87,7 @@ export default function ProfilePage() {
     setProfileError(null);
     setProfileSuccess(null);
     setIsUpdatingProfile(true);
-    
+
     try {
       await updateProfile({
         variables: {
@@ -93,11 +98,14 @@ export default function ProfilePage() {
           },
         },
       });
-      
+
       setProfileSuccess("Profile updated successfully!");
     } catch (err: any) {
       // Extract the actual error message from GraphQL errors
-      const errorMessage = err.graphQLErrors?.[0]?.message || err.message || "Failed to update profile";
+      const errorMessage =
+        err.graphQLErrors?.[0]?.message ||
+        err.message ||
+        "Failed to update profile";
       setProfileError(errorMessage);
     } finally {
       setIsUpdatingProfile(false);
@@ -108,19 +116,19 @@ export default function ProfilePage() {
     e.preventDefault();
     setPasswordError(null);
     setPasswordSuccess(null);
-    
+
     if (passwordForm.new_password !== passwordForm.confirm_password) {
       setPasswordError("New passwords don't match");
       return;
     }
-    
+
     if (passwordForm.new_password.length < 6) {
       setPasswordError("Password must be at least 6 characters long");
       return;
     }
-    
+
     setIsChangingPassword(true);
-    
+
     try {
       await changePassword({
         variables: {
@@ -130,7 +138,7 @@ export default function ProfilePage() {
           },
         },
       });
-      
+
       setPasswordSuccess("Password changed successfully!");
       setPasswordForm({
         current_password: "",
@@ -138,8 +146,11 @@ export default function ProfilePage() {
         confirm_password: "",
       });
     } catch (err: any) {
-      // Extract the actual error message from GraphQL errors  
-      const errorMessage = err.graphQLErrors?.[0]?.message || err.message || "Failed to change password";
+      // Extract the actual error message from GraphQL errors
+      const errorMessage =
+        err.graphQLErrors?.[0]?.message ||
+        err.message ||
+        "Failed to change password";
       setPasswordError(errorMessage);
     } finally {
       setIsChangingPassword(false);
@@ -163,7 +174,10 @@ export default function ProfilePage() {
     <>
       <Head>
         <title>Profile Settings - SSA | Manage Your Account</title>
-        <meta name="description" content="Update your profile information and change your password in SSA." />
+        <meta
+          name="description"
+          content="Update your profile information and change your password in SSA."
+        />
       </Head>
       <Layout>
         <div className="max-w-4xl mx-auto space-y-8 p-6">
@@ -199,7 +213,10 @@ export default function ProfilePage() {
                         id="first_name"
                         value={profileForm.first_name}
                         onChange={(e) =>
-                          setProfileForm({ ...profileForm, first_name: e.target.value })
+                          setProfileForm({
+                            ...profileForm,
+                            first_name: e.target.value,
+                          })
                         }
                         placeholder="Enter first name"
                       />
@@ -210,13 +227,16 @@ export default function ProfilePage() {
                         id="last_name"
                         value={profileForm.last_name}
                         onChange={(e) =>
-                          setProfileForm({ ...profileForm, last_name: e.target.value })
+                          setProfileForm({
+                            ...profileForm,
+                            last_name: e.target.value,
+                          })
                         }
                         placeholder="Enter last name"
                       />
                     </div>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="email">Email Address</Label>
                     <Input
@@ -224,7 +244,10 @@ export default function ProfilePage() {
                       type="email"
                       value={profileForm.email}
                       onChange={(e) =>
-                        setProfileForm({ ...profileForm, email: e.target.value })
+                        setProfileForm({
+                          ...profileForm,
+                          email: e.target.value,
+                        })
                       }
                       placeholder="Enter email address"
                     />
@@ -241,7 +264,9 @@ export default function ProfilePage() {
                   {profileSuccess && (
                     <Alert className="border-green-200 bg-green-50 dark:bg-green-900/20">
                       <CheckCircle className="h-4 w-4 text-green-600" />
-                      <AlertTitle className="text-green-800 dark:text-green-400">Success</AlertTitle>
+                      <AlertTitle className="text-green-800 dark:text-green-400">
+                        Success
+                      </AlertTitle>
                       <AlertDescription className="text-green-700 dark:text-green-300">
                         {profileSuccess}
                       </AlertDescription>
@@ -280,12 +305,15 @@ export default function ProfilePage() {
                       type="password"
                       value={passwordForm.current_password}
                       onChange={(e) =>
-                        setPasswordForm({ ...passwordForm, current_password: e.target.value })
+                        setPasswordForm({
+                          ...passwordForm,
+                          current_password: e.target.value,
+                        })
                       }
                       placeholder="Enter current password"
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="new_password">New Password</Label>
                     <Input
@@ -293,20 +321,28 @@ export default function ProfilePage() {
                       type="password"
                       value={passwordForm.new_password}
                       onChange={(e) =>
-                        setPasswordForm({ ...passwordForm, new_password: e.target.value })
+                        setPasswordForm({
+                          ...passwordForm,
+                          new_password: e.target.value,
+                        })
                       }
                       placeholder="Enter new password"
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
-                    <Label htmlFor="confirm_password">Confirm New Password</Label>
+                    <Label htmlFor="confirm_password">
+                      Confirm New Password
+                    </Label>
                     <Input
                       id="confirm_password"
                       type="password"
                       value={passwordForm.confirm_password}
                       onChange={(e) =>
-                        setPasswordForm({ ...passwordForm, confirm_password: e.target.value })
+                        setPasswordForm({
+                          ...passwordForm,
+                          confirm_password: e.target.value,
+                        })
                       }
                       placeholder="Confirm new password"
                     />
@@ -323,7 +359,9 @@ export default function ProfilePage() {
                   {passwordSuccess && (
                     <Alert className="border-green-200 bg-green-50 dark:bg-green-900/20">
                       <CheckCircle className="h-4 w-4 text-green-600" />
-                      <AlertTitle className="text-green-800 dark:text-green-400">Success</AlertTitle>
+                      <AlertTitle className="text-green-800 dark:text-green-400">
+                        Success
+                      </AlertTitle>
                       <AlertDescription className="text-green-700 dark:text-green-300">
                         {passwordSuccess}
                       </AlertDescription>
@@ -357,7 +395,9 @@ export default function ProfilePage() {
                   <div className="text-2xl font-bold text-foreground">
                     {dashboardData?.dashboard?.totalStocks || 0}
                   </div>
-                  <div className="text-sm text-muted-foreground">Total Holdings</div>
+                  <div className="text-sm text-muted-foreground">
+                    Total Holdings
+                  </div>
                 </div>
                 <div className="text-center p-4 bg-muted/50 rounded-lg">
                   <div className="text-2xl font-bold text-foreground">
@@ -367,17 +407,28 @@ export default function ProfilePage() {
                 </div>
                 <div className="text-center p-4 bg-muted/50 rounded-lg">
                   <div className="text-2xl font-bold text-primary">
-                    ₹{(dashboardData?.dashboard?.portfolio?.totalMarketValue || 0).toLocaleString()}
+                    ₹
+                    {(
+                      dashboardData?.dashboard?.portfolio?.totalMarketValue || 0
+                    ).toLocaleString()}
                   </div>
-                  <div className="text-sm text-muted-foreground">Portfolio Value</div>
+                  <div className="text-sm text-muted-foreground">
+                    Portfolio Value
+                  </div>
                 </div>
                 <div className="text-center p-4 bg-muted/50 rounded-lg">
-                  <div className={`text-2xl font-bold ${
-                    (dashboardData?.dashboard?.portfolio?.totalGainLoss || 0) >= 0 
-                      ? 'text-green-600' 
-                      : 'text-red-600'
-                  }`}>
-                    ₹{(dashboardData?.dashboard?.portfolio?.totalGainLoss || 0).toLocaleString()}
+                  <div
+                    className={`text-2xl font-bold ${
+                      (dashboardData?.dashboard?.portfolio?.totalGainLoss ||
+                        0) >= 0
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }`}
+                  >
+                    ₹
+                    {(
+                      dashboardData?.dashboard?.portfolio?.totalGainLoss || 0
+                    ).toLocaleString()}
                   </div>
                   <div className="text-sm text-muted-foreground">Total P&L</div>
                 </div>

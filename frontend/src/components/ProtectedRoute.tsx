@@ -1,8 +1,7 @@
 // components/ProtectedRoute.tsx
-import React from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/router';
-import { useEffect } from 'react';
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/router";
+import React, { useEffect } from "react";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -10,10 +9,10 @@ interface ProtectedRouteProps {
   redirectTo?: string;
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-  children, 
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
   requireAuth = true,
-  redirectTo = '/login'
+  redirectTo = "/login",
 }) => {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
