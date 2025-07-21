@@ -17,10 +17,10 @@ from .graphql_api.resolver import schema
 app = FastAPI()
 security = HTTPBearer(auto_error=False)
 
-# Configure CORS with proper file upload headers
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Be specific for development
+    allow_origins=["*"],  
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=[
@@ -69,7 +69,7 @@ async def get_context(
 graphql_app = GraphQLRouter(
     schema, 
     context_getter=get_context,
-    multipart_uploads_enabled=True  # This is crucial!
+    multipart_uploads_enabled=True  
 )
 
 app.include_router(graphql_app, prefix="/graphql")

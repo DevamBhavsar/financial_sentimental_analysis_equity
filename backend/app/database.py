@@ -6,7 +6,7 @@ from .config import settings
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from contextlib import asynccontextmanager
 
-print(settings.DATABASE_URL)  # Database
+
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.debug,
