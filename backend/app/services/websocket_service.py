@@ -4,7 +4,7 @@ import logging
 from typing import Dict, List, Callable, Optional, Any
 from SmartApi.smartWebSocketV2 import SmartWebSocketV2
 from .market_service import market_service
-
+from ..config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +28,7 @@ class WebSocketManager:
                     market_service.auth_token,
                     market_service.feed_token,
                     market_service.smart_api,
+                    settings.angel_one_client_code,
                 ]
             ):
                 logger.error(
@@ -35,12 +36,7 @@ class WebSocketManager:
                 )
                 return False
 
-            # THE FIX IS HERE: Accessing clientCode from settings, where it's reliably stored
-            client_code = (
-                market_service.smart_api.clientCode
-                if hasattr(market_service.smart_api, "clientCode")
-                else market_service.smart_api.client_code
-            )
+            client_code = settings.angel_one_client_code
 
             # Initialize WebSocket
             self.websocket = SmartWebSocketV2(

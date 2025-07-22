@@ -117,19 +117,32 @@ class MarketService:
         from datetime import timedelta
 
         current_date = current_time.date()
+        weekday = current_time.weekday()
 
-        # If market is closed today, check if it will open today
-        if current_time.time() < MARKET_OPEN_TIME and current_time.weekday() < 5:
+        if weekday < 5 and current_time.time() < MARKET_OPEN_TIME:
+            # If market is closed today but will open later today
             next_open = datetime.combine(current_date, MARKET_OPEN_TIME, IST)
             return next_open.strftime("%Y-%m-%d %H:%M:%S %Z")
 
-        # Find next weekday (Monday = 0, Sunday = 6)
-        days_until_monday = (7 - current_time.weekday()) % 7
-        if days_until_monday == 0:  # If today is Monday but market is closed
-            days_until_monday = 7
+        if weekday == 4:
+            next_trading_date = current_date + timedelta(days=3)  # Skip to next Monday
+        elif weekday == 5:  # Saturday
+            next_trading_date = current_date + timedelta(days=2)  # Skip to Monday
+        else:  # Sunday or any other day
+            next_trading_date = current_date + timedelta(days=1)
+
+        # # If market is closed today, check if it will open today
+        # if current_time.time() < MARKET_OPEN_TIME and current_time.weekday() < 5:
+        #     next_open = datetime.combine(current_date, MARKET_OPEN_TIME, IST)
+        #     return next_open.strftime("%Y-%m-%d %H:%M:%S %Z")
+
+        # # Find next weekday (Monday = 0, Sunday = 6)
+        # days_until_monday = (7 - current_time.weekday()) % 7
+        # if days_until_monday == 0:  # If today is Monday but market is closed
+        #     days_until_monday = 7
 
         # Add the required days to get to next trading day
-        next_trading_date = current_date + timedelta(days=days_until_monday)
+        # next_trading_date = current_date + timedelta(days=days_until_monday)
         next_open = datetime.combine(next_trading_date, MARKET_OPEN_TIME, IST)
 
         return next_open.strftime("%Y-%m-%d %H:%M:%S %Z")

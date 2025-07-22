@@ -89,16 +89,19 @@ async def search_instruments(request: InstrumentSearch):
         # Format response for frontend dropdown
         formatted_instruments = []
         for instrument in instruments:
-            formatted_instruments.append(
-                {
-                    "symbol": instrument.get("tradingsymbol", ""),
-                    "name": instrument.get("name", instrument.get("tradingsymbol", "")),
-                    "token": instrument.get("symboltoken", ""),
-                    "exchange": instrument.get("exchange", request.exchange),
-                    "instrument_type": instrument.get("instrumenttype", ""),
-                    "lot_size": instrument.get("lotsize", 1),
-                }
-            )
+            if instrument.get("tradingsymbol", "").endswith("-EQ"):
+                formatted_instruments.append(
+                    {
+                        "symbol": instrument.get("tradingsymbol", ""),
+                        "name": instrument.get(
+                            "name", instrument.get("tradingsymbol", "")
+                        ),
+                        "token": instrument.get("symboltoken", ""),
+                        "exchange": instrument.get("exchange", request.exchange),
+                        "instrument_type": instrument.get("instrumenttype", ""),
+                        "lot_size": instrument.get("lotsize", 1),
+                    }
+                )
 
         return {"success": True, "data": formatted_instruments}
 
@@ -277,7 +280,7 @@ async def websocket_endpoint(websocket: WebSocket):
         # Remove callback when client disconnects
         try:
             websocket_manager.remove_data_callback(market_data_callback)
-        except:
+        except HTTPException:
             pass
 
 
