@@ -3,6 +3,7 @@ from strawberry.file_uploads import Upload
 from typing import List, Optional
 from datetime import datetime
 
+
 # Auth Types
 @strawberry.type
 class User:
@@ -14,6 +15,7 @@ class User:
     created_at: datetime
     updated_at: Optional[datetime] = None
 
+
 @strawberry.input
 class UserInput:
     email: str
@@ -21,10 +23,12 @@ class UserInput:
     first_name: Optional[str] = None
     last_name: Optional[str] = None
 
+
 @strawberry.input
 class LoginInput:
     email: str
     password: str
+
 
 @strawberry.input
 class UpdateProfileInput:
@@ -32,10 +36,12 @@ class UpdateProfileInput:
     last_name: Optional[str] = None
     email: Optional[str] = None
 
+
 @strawberry.input
 class ChangePasswordInput:
     current_password: str
     new_password: str
+
 
 @strawberry.type
 class AuthPayload:
@@ -43,6 +49,7 @@ class AuthPayload:
     token_type: str
     expires_in: int
     user: User
+
 
 # Holding Types
 @strawberry.type
@@ -58,22 +65,28 @@ class Holding:
     invested_value: float = strawberry.field(name="invested_value")
     market_value: float = strawberry.field(name="market_value")
     overall_gain_loss: float = strawberry.field(name="overall_gain_loss")
-    
+
     # Optional fields that might not always be present
     client_id: Optional[str] = strawberry.field(name="client_id", default=None)
     market_cap: Optional[float] = strawberry.field(name="market_cap", default=None)
     stcg_quantity: Optional[int] = strawberry.field(name="stcg_quantity", default=None)
     stcg_value: Optional[float] = strawberry.field(name="stcg_value", default=None)
-    
-    # Commented fields for future use
-    # free_quantity: Optional[int] = strawberry.field(name="free_quantity", default=None)
-    # unsettled_quantity: Optional[int] = strawberry.field(name="unsettled_quantity", default=None)
-    # margin_pledged_quantity: Optional[int] = strawberry.field(name="margin_pledged_quantity", default=None)
-    # paylater_mtf_quantity: Optional[int] = strawberry.field(name="paylater_mtf_quantity", default=None)
-    # unpaid_cusa_qty: Optional[int] = strawberry.field(name="unpaid_cusa_qty", default=None)
-    # blocked_qty: Optional[int] = strawberry.field(name="blocked_qty", default=None)
-    # ltcg_quantity: Optional[int] = strawberry.field(name="ltcg_quantity", default=None)
-    # ltcg_value: Optional[float] = strawberry.field(name="ltcg_value", default=None)
+
+    # New fields from Angel One API
+    open: Optional[float] = strawberry.field(name="open", default=None)
+    high: Optional[float] = strawberry.field(name="high", default=None)
+    low: Optional[float] = strawberry.field(name="low", default=None)
+    close: Optional[float] = strawberry.field(name="close", default=None)
+    trade_volume: Optional[int] = strawberry.field(name="trade_volume", default=None)
+    year_high: Optional[float] = strawberry.field(name="year_high", default=None)
+    year_low: Optional[float] = strawberry.field(name="year_low", default=None)
+    total_buy_quantity: Optional[int] = strawberry.field(
+        name="total_buy_quantity", default=None
+    )
+    total_sell_quantity: Optional[int] = strawberry.field(
+        name="total_sell_quantity", default=None
+    )
+
 
 @strawberry.input
 class HoldingInput:
@@ -86,12 +99,13 @@ class HoldingInput:
     invested_value: float
     market_value: float
     overall_gain_loss: float
-    
+
     # Optional fields
     client_id: Optional[str] = None
     market_cap: Optional[float] = None
     stcg_quantity: Optional[int] = None
     stcg_value: Optional[float] = None
+
 
 @strawberry.input
 class HoldingUpdateInput:
@@ -109,6 +123,7 @@ class HoldingUpdateInput:
     stcg_quantity: Optional[int] = None
     stcg_value: Optional[float] = None
 
+
 # Watchlist Types
 @strawberry.type
 class Watchlist:
@@ -119,11 +134,13 @@ class Watchlist:
     sector: Optional[str] = None
     created_at: datetime
 
+
 @strawberry.input
 class WatchlistInput:
     ticker: str
     name: str
     sector: str
+
 
 # Other Data Types
 @strawberry.type
@@ -140,6 +157,7 @@ class Article:
     is_processed: bool
     created_at: datetime
 
+
 @strawberry.type
 class Sentiment:
     id: int
@@ -152,6 +170,7 @@ class Sentiment:
     analysis_model: str
     created_at: datetime
 
+
 @strawberry.type
 class PortfolioSummary:
     totalMarketValue: float
@@ -162,7 +181,8 @@ class PortfolioSummary:
     todaysGainLossPercent: float
     totalDividends: float
     avgGainLossPercent: float
-    
+
+
 @strawberry.type
 class DashboardData:
     portfolio: PortfolioSummary
@@ -172,6 +192,7 @@ class DashboardData:
     totalStocks: int
     sectorsCount: int
     holdings: List[Holding]
+
 
 @strawberry.type
 class UploadHoldingsResponse:
